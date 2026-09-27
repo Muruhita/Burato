@@ -1,4 +1,4 @@
-// pages/api/admins.js
+// pages/api/admins.js  ← БЭК! Тут серверный код!
 import redis from '../../lib/redis';
 import { verifyToken } from '../../lib/discord';
 import { ADMIN_IDS } from '../../lib/admins';
