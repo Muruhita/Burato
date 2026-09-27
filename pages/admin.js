@@ -124,6 +124,25 @@ export default function AdminPanel() {
       <div className="admin-container">
         <h1>Админка</h1>
 
+        {/* 📊 Сервер логов бота */}
+        <div className="section logs-section">
+          <div className="logs-row">
+            <div className="logs-info">
+              <h2>📊 Сервер Логов Бота</h2>
+              <p>Здесь хранятся все логи: заявки, банворды, автобаны, действия админов и ошибки бота.</p>
+            </div>
+            <a
+              href="https://discord.gg/ce9x4WpSp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="logs-btn"
+            >
+              <span className="logs-btn-icon">💬</span>
+              Присоединиться
+            </a>
+          </div>
+        </div>
+
         {/* Секция объявления */}
         <div className="section">
           <h2>📢 Глобальное уведомление</h2>
@@ -279,10 +298,96 @@ export default function AdminPanel() {
       </div>
 
       <style jsx>{`
-        .admin-container { max-width: 900px; margin: 0 auto; }
-        .section { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; margin-bottom: 25px; }
-        .section h2 { margin-bottom: 15px; font-size: 20px; color: #fff; }
+        .admin-container {
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        .section {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          padding: 25px;
+          border-radius: 15px;
+          margin-bottom: 25px;
+        }
+        .section h2 {
+          margin-bottom: 15px;
+          font-size: 20px;
+          color: #fff;
+        }
 
+        /* 📊 Сервер логов */
+        .logs-section {
+          background: linear-gradient(135deg, rgba(88, 101, 242, 0.15), rgba(114, 137, 218, 0.08));
+          border: 1px solid rgba(88, 101, 242, 0.5);
+          box-shadow: 0 8px 30px rgba(88, 101, 242, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+        .logs-section::before {
+          content: '';
+          position: absolute;
+          top: -50px;
+          right: -50px;
+          width: 180px;
+          height: 180px;
+          background: radial-gradient(circle, rgba(88, 101, 242, 0.4), transparent 70%);
+          filter: blur(40px);
+          pointer-events: none;
+        }
+        .logs-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          flex-wrap: wrap;
+          position: relative;
+          z-index: 1;
+        }
+        .logs-info {
+          flex: 1;
+          min-width: 240px;
+        }
+        .logs-info h2 {
+          margin-bottom: 8px;
+          color: #fff;
+          font-size: 20px;
+        }
+        .logs-info p {
+          color: #b0b8e8;
+          font-size: 13px;
+          line-height: 1.5;
+          margin: 0;
+        }
+        .logs-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 14px 26px;
+          background: linear-gradient(135deg, #5865F2, #7289DA);
+          color: #fff;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 800;
+          font-size: 14px;
+          letter-spacing: 0.5px;
+          text-decoration: none;
+          transition: all 0.3s;
+          white-space: nowrap;
+          box-shadow: 0 6px 22px rgba(88, 101, 242, 0.5);
+        }
+        .logs-btn:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 34px rgba(88, 101, 242, 0.7);
+        }
+        .logs-btn:active {
+          transform: translateY(-1px);
+        }
+        .logs-btn-icon {
+          font-size: 18px;
+        }
+
+        /* 🧪 TestLik секция */
         .testlik-section {
           background: linear-gradient(135deg, rgba(88, 101, 242, 0.12), rgba(0, 229, 255, 0.08));
           border: 1px solid rgba(88, 101, 242, 0.4);
@@ -293,16 +398,38 @@ export default function AdminPanel() {
         .testlik-section::before {
           content: '';
           position: absolute;
-          top: -50px; right: -50px;
-          width: 180px; height: 180px;
+          top: -50px;
+          right: -50px;
+          width: 180px;
+          height: 180px;
           background: radial-gradient(circle, rgba(0, 229, 255, 0.25), transparent 70%);
           filter: blur(40px);
           pointer-events: none;
         }
-        .testlik-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; position: relative; z-index: 1; }
-        .testlik-info { flex: 1; min-width: 240px; }
-        .testlik-info h2 { margin-bottom: 8px; color: #fff; font-size: 20px; }
-        .testlik-info p { color: #8898c8; font-size: 13px; line-height: 1.5; margin: 0; }
+        .testlik-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          flex-wrap: wrap;
+          position: relative;
+          z-index: 1;
+        }
+        .testlik-info {
+          flex: 1;
+          min-width: 240px;
+        }
+        .testlik-info h2 {
+          margin-bottom: 8px;
+          color: #fff;
+          font-size: 20px;
+        }
+        .testlik-info p {
+          color: #8898c8;
+          font-size: 13px;
+          line-height: 1.5;
+          margin: 0;
+        }
         .testlik-btn {
           padding: 14px 26px;
           background: linear-gradient(135deg, #5865F2, #00E5FF);
@@ -319,47 +446,212 @@ export default function AdminPanel() {
           white-space: nowrap;
           box-shadow: 0 6px 22px rgba(88, 101, 242, 0.45);
         }
-        .testlik-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 34px rgba(0, 229, 255, 0.6); }
-        .testlik-btn:active { transform: translateY(-1px); }
+        .testlik-btn:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 34px rgba(0, 229, 255, 0.6);
+        }
+        .testlik-btn:active {
+          transform: translateY(-1px);
+        }
 
-        .announcement-textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; padding: 12px; font-size: 16px; resize: vertical; }
-        .announcement-actions { margin-top: 10px; display: flex; gap: 10px; }
-        .save-announcement-btn { background: #5865F2; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .clear-announcement-btn { background: #f44336; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .announcement-msg { margin-top: 10px; color: #4CAF50; }
+        .announcement-textarea {
+          width: 100%;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 8px;
+          color: white;
+          padding: 12px;
+          font-size: 16px;
+          resize: vertical;
+        }
+        .announcement-actions {
+          margin-top: 10px;
+          display: flex;
+          gap: 10px;
+        }
+        .save-announcement-btn {
+          background: #5865F2;
+          color: white;
+          border: none;
+          padding: 10px 15px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .clear-announcement-btn {
+          background: #f44336;
+          color: white;
+          border: none;
+          padding: 10px 15px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .announcement-msg {
+          margin-top: 10px;
+          color: #4CAF50;
+        }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 15px; text-align: center; }
-        .stat-value { display: block; font-size: 32px; font-weight: bold; color: #5865F2; }
-        .stat-label { color: #aaa; font-size: 14px; }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+        .stat-card {
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 10px;
+          padding: 15px;
+          text-align: center;
+        }
+        .stat-value {
+          display: block;
+          font-size: 32px;
+          font-weight: bold;
+          color: #5865F2;
+        }
+        .stat-label {
+          color: #aaa;
+          font-size: 14px;
+        }
         .types-stats { margin-top: 15px; }
-        .types-stats h3 { color: #ccc; font-size: 16px; margin-bottom: 10px; }
-        .types-stats ul { list-style: none; padding: 0; }
-        .types-stats li { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; margin-bottom: 5px; color: #ccc; }
+        .types-stats h3 {
+          color: #ccc;
+          font-size: 16px;
+          margin-bottom: 10px;
+        }
+        .types-stats ul {
+          list-style: none;
+          padding: 0;
+        }
+        .types-stats li {
+          background: rgba(255,255,255,0.05);
+          padding: 8px;
+          border-radius: 8px;
+          margin-bottom: 5px;
+          color: #ccc;
+        }
         .types-stats li strong { color: #fff; }
 
-        input[type="text"] { width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
+        input[type="text"] {
+          width: 100%;
+          padding: 12px;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
+          color: white;
+          border-radius: 8px;
+          margin-bottom: 10px;
+          box-sizing: border-box;
+        }
 
-        .permanent-checkbox { display: flex; align-items: center; gap: 10px; color: #ff8080; font-size: 14px; font-weight: 600; margin: 8px 0 14px; cursor: pointer; user-select: none; }
-        .permanent-checkbox input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #ff4444; margin: 0; }
+        .permanent-checkbox {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #ff8080;
+          font-size: 14px;
+          font-weight: 600;
+          margin: 8px 0 14px;
+          cursor: pointer;
+          user-select: none;
+        }
+        .permanent-checkbox input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          accent-color: #ff4444;
+          margin: 0;
+        }
 
-        button { padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: all 0.3s; margin-right: 10px; }
-        .ban-btn { background: #f44336; color: white; }
+        button {
+          padding: 12px 20px;
+          border-radius: 8px;
+          border: none;
+          cursor: pointer;
+          font-weight: bold;
+          transition: all 0.3s;
+          margin-right: 10px;
+        }
+        .ban-btn {
+          background: #f44336;
+          color: white;
+        }
         .ban-btn:hover { background: #d32f2f; }
-        .stop-btn { background: #ff4444; color: white; }
-        .start-btn { background: #4CAF50; color: white; }
-        .status-text { margin-top: 10px; color: #aaa; }
-        .status-msg { margin-top: 10px; color: #4CAF50; }
-        .banned-list { max-height: 300px; overflow-y: auto; }
-        .banned-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 15px; font-size: 14px; color: #ccc; flex-wrap: wrap; }
-        .banned-item-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .stop-btn {
+          background: #ff4444;
+          color: white;
+        }
+        .start-btn {
+          background: #4CAF50;
+          color: white;
+        }
+        .status-text {
+          margin-top: 10px;
+          color: #aaa;
+        }
+        .status-msg {
+          margin-top: 10px;
+          color: #4CAF50;
+        }
+        .banned-list {
+          max-height: 300px;
+          overflow-y: auto;
+        }
+        .banned-item {
+          background: rgba(255,255,255,0.05);
+          padding: 10px;
+          border-radius: 8px;
+          margin-bottom: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 15px;
+          font-size: 14px;
+          color: #ccc;
+          flex-wrap: wrap;
+        }
+        .banned-item-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
         .banned-id { color: #ccc; }
-        .permanent-badge { background: rgba(255, 60, 60, 0.2); border: 1px solid #ff4444; color: #ff8080; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .banned-reason { color: #aaa; font-size: 13px; text-align: right; flex: 1; min-width: 200px; }
+        .permanent-badge {
+          background: rgba(255, 60, 60, 0.2);
+          border: 1px solid #ff4444;
+          color: #ff8080;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .banned-reason {
+          color: #aaa;
+          font-size: 13px;
+          text-align: right;
+          flex: 1;
+          min-width: 200px;
+        }
 
         @media (max-width: 600px) {
-          .testlik-row { flex-direction: column; text-align: center; }
-          .testlik-btn { width: 100%; justify-content: center; }
+          .logs-row {
+            flex-direction: column;
+            text-align: center;
+          }
+          .logs-btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .testlik-row {
+            flex-direction: column;
+            text-align: center;
+          }
+          .testlik-btn {
+            width: 100%;
+            justify-content: center;
+          }
         }
       `}</style>
     </Layout>
