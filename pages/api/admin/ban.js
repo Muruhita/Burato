@@ -1,6 +1,7 @@
 import { addToBlacklist } from '../../../lib/blacklist';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
+import { logAdminAction, logError } from '../../../lib/logger';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -26,6 +27,18 @@ export default async function handler(req, res) {
       !!permanent
     );
 
+    logAdminAction({
+      adminId: user.id,
+      adminUsername: user.username,
+      action: permanent ? 'permanent_ban' : 'ban',
+      targetId: userId,
+      targetUsername: username || 'Неизвестный',
+      reason: reason || 'Не указана',
+      extra: {
+        '⏱ Длительность': permanent ? 'Навсегда' : '7 дней'
+      }
+    }).catch(e => console.error('[ban] admin log error:', e.message));
+
     return res.status(200).json({
       message: permanent
         ? '✅ Пользователь заблокирован навсегда.'
@@ -33,6 +46,13 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Ошибка блокировки:', error);
+    logError({
+      scope: 'admin:ban',
+      message: error.message,
+      stack: error.stack,
+      userId: user.id,
+      extra: { targetId: userId }
+    }).catch(() => {});
     return res.status(500).json({ error: 'Ошибка при блокировке' });
   }
 }
