@@ -13,6 +13,7 @@ import {
   TRUSTED_LINK_HOSTS
 } from '../../lib/urlValidator';
 import { checkUrlsSafeBrowsing, threatName } from '../../lib/safeBrowsing';
+import { logSubmission, logBanword, logError } from '../../lib/logger';
 
 const DEPARTMENTS = {
   'ib': { name: 'IB (Intelligence Branch)', webhook: process.env.WEBHOOK_REPORT_IB, emoji: '🕵️', roleId: '1398200840900055071', roleId2: '1520504887497064639' },
@@ -54,7 +55,6 @@ const webhooks = {
   testlik: process.env.TESTLIK_WEBHOOK
 };
 
-// 🖼️ Хосты, с которых разрешено встраивать картинку в Discord-embed
 const EMBED_IMAGE_HOSTS = [
   'https://i.ibb.co/',
   'https://i.imgur.com/',
@@ -91,15 +91,12 @@ async function sendToDiscord(webhookUrl, data, retries = 3) {
 // ─────────────────────────────────────────────────────────────
 // 🔒 Классификация URL-полей
 // ─────────────────────────────────────────────────────────────
-
-// 🖼️ Image-поля — только доверенные хостеры картинок
 const IMAGE_FIELDS = [
   'screenshot', 'screenshots', 'singleImage', 'multiImages',
   'proof', 'proofLink', 'rankProof',
   'passportScreenshot', 'militaryId', 'medicalCertificates'
 ];
 
-// 📄 Doc-поля — ссылки на отчёты, документы
 const DOC_FIELDS = [
   'approvalLink', 'approval',
   'reportLink', 'workLink', 'workLinks'
@@ -143,7 +140,6 @@ export default async function handler(req, res) {
   const isActive = await isFormSubmissionActive();
   if (!isActive) return res.status(403).json({ error: '🚫 Подача заявок остановлена администрацией.' });
 
-  // 🚫 Проверка бана
   const banInfo = await getBanInfo(user.id);
   if (banInfo.banned) {
     return res.status(403).json({
@@ -157,7 +153,6 @@ export default async function handler(req, res) {
   if (spamCheck.isSpam) return res.status(429).json({ error: spamCheck.message });
 
   const { type, department, targetDepartment, ...rawFormData } = req.body;
-  // 🧼 Санитайз
   const formData = sanitizeObject(rawFormData, 1000);
   const userId = user.id;
   const username = user.username;
@@ -208,6 +203,18 @@ export default async function handler(req, res) {
     const badWord = foundWord || foundWords.join(', ');
 
     await addToBlacklist(user.id, username, `Банворд: ${badWord}`);
+
+    // 📢 Лог банворда
+    await logBanword({
+      userId,
+      username,
+      avatar: user.avatar,
+      type,
+      formData,
+      badWord,
+      allFoundWords: foundWords,
+      action: 'Автобан на 7 дней + отказ в заявке'
+    }).catch(e => console.error('[submit] banword log error:', e.message));
 
     return res.status(403).json({
       banned: true,
@@ -292,7 +299,6 @@ export default async function handler(req, res) {
     timestamp: new Date().toISOString()
   };
 
-  // 🖼️ Показываем картинку в embed, если URL с доверенного хоста
   if (
     formData.screenshot &&
     EMBED_IMAGE_HOSTS.some(h => formData.screenshot.startsWith(h))
@@ -306,6 +312,17 @@ export default async function handler(req, res) {
     username: 'FIB Forms',
     avatar_url: 'https://i.ytimg.com/vi/m5yUwUSBxsg/maxresdefault.jpg'
   });
+
+  // 📢 Лог отправки заявки
+  logSubmission({
+    type,
+    username,
+    userId,
+    avatar: user.avatar,
+    formData,
+    department,
+    targetDepartment
+  }).catch(e => console.error('[submit] submission log error:', e.message));
 
   if (result.success) {
     try {
@@ -326,6 +343,14 @@ export default async function handler(req, res) {
 
     res.status(200).json({ success: true });
   } else {
+    // 📢 Лог ошибки
+    logError({
+      scope: 'submit:discord',
+      message: result.error || 'Failed to send to Discord',
+      userId,
+      extra: { type, webhookUrl: webhookUrl ? 'set' : 'missing' }
+    }).catch(() => {});
+
     res.status(500).json({ error: `Не удалось отправить заявку: ${result.error}` });
   }
 }
