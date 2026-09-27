@@ -1,7 +1,5 @@
-// pages/api/admins.js
-import redis from '../../lib/redis';
-import { verifyToken } from '../../lib/discord';
-import { ADMIN_IDS } from '../../lib/admins';
+import Layout from '../components/Layout';
+import { useState, useEffect } from 'react';
 
 async function fetchDiscordUser(userId, botToken) {
   try {
