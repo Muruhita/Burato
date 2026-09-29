@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import CloudBackground from '../components/CloudBackground';
 
 const TOS_URL = 'https://docs.google.com/document/d/1GOFZ0kCdL2WNg85YRgi07BRHd-uQuOQKeqX4m0Ru7Zs/edit?usp=sharing';
 const PRIVACY_URL = 'https://docs.google.com/document/d/1kG7hH5jsf1ItOQwsnvGMs_drvssIeJ_vbZQ9_hG7PuE/edit?usp=sharing';
@@ -86,8 +85,6 @@ export default function Home() {
 
   return (
     <div className="auth">
-      <CloudBackground />
-
       <div className={`auth-card ${visible ? 'show' : ''}`}>
         <div className="top-strip">
           <span>■</span>
@@ -163,7 +160,7 @@ export default function Home() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #0a0a0a;
+          background: transparent;
           padding: 20px;
         }
 
