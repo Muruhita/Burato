@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    await removeBlacklist(userId);
+    await removeFromBlacklist(userId);
     await clearSpamLog(userId);
 
     logAdminAction({
