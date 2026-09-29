@@ -27,14 +27,9 @@ export default function PromotionForm() {
       fetch('/api/me').then(res => res.json()),
       fetch('/api/profile').then(res => res.json())
     ]).then(([meData, profileData]) => {
-      if (!meData.user) {
-        router.push('/');
-        return;
-      }
+      if (!meData.user) { router.push('/'); return; }
       setUser(meData.user);
-      if (profileData.nickname) {
-        setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
-      }
+      if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
       if (profileData.banned) {
         setBanned(true);
         setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
@@ -58,13 +53,11 @@ export default function PromotionForm() {
           reportLink: formData.reportLink
         })
       });
-
       if (res.ok) {
         setSuccess(true);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
-
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) {
@@ -76,7 +69,6 @@ export default function PromotionForm() {
         }
         throw new Error(err.error || 'Доступ запрещён');
       }
-
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
     } catch (error) {
@@ -85,36 +77,84 @@ export default function PromotionForm() {
     }
   };
 
-  if (loading) return <div className="loading-container"><div className="loading-spinner"></div><p>Загрузка...</p></div>;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="loading-line">ЗАГРУЗКА ДАННЫХ...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div className="form-page">
-        <button onClick={() => router.push('/dashboard')} className="back-btn">← Назад к выбору</button>
-        <div className="form-container">
-          <h1>⬆️ Запрос на повышение</h1>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Имя Фамилия + Статик *</label>
-              <input type="text" required value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} placeholder="Например: Name Surname 123456" />
+        <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
+
+        <div className="form-shell">
+          <header className="form-head">
+            <div className="fh-stamp">FORM-001 · PERSONNEL</div>
+            <h1 className="fh-title">Запрос на повышение</h1>
+            <p className="fh-sub">
+              Заявка на повышение по рангу. Укажите диапазон и приложите ссылку на одобренный отчёт.
+            </p>
+            <div className="fh-rule" />
+          </header>
+
+          <form onSubmit={handleSubmit} className="form-body">
+            <div className="field-block">
+              <label className="lbl">Имя Фамилия + Статик</label>
+              <input
+                className="field"
+                type="text"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                placeholder="Name Surname 123456"
+              />
             </div>
-            <div className="form-group">
-              <label>С какого на какой ранг вы повышаетесь *</label>
-              <select required value={formData.rankRange} onChange={(e) => setFormData({...formData, rankRange: e.target.value})}>
-                <option value="">-- Выберите диапазон рангов --</option>
-                {RANK_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+
+            <div className="field-block">
+              <label className="lbl">С какого на какой ранг</label>
+              <select
+                className="field"
+                required
+                value={formData.rankRange}
+                onChange={(e) => setFormData({ ...formData, rankRange: e.target.value })}
+              >
+                <option value="">-- ВЫБЕРИТЕ ДИАПАЗОН --</option>
+                {RANK_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label>Ссылка на одобренный отчет *</label>
-              <textarea required value={formData.reportLink} onChange={(e) => setFormData({...formData, reportLink: e.target.value})} rows="4" />
+
+            <div className="field-block">
+              <label className="lbl">Ссылка на одобренный отчёт</label>
+              <textarea
+                className="field"
+                required
+                value={formData.reportLink}
+                onChange={(e) => setFormData({ ...formData, reportLink: e.target.value })}
+                rows="4"
+                placeholder="https://..."
+              />
             </div>
-            <div className="form-group">
-              <label>Discord ID</label>
-              <input type="text" value={`${user.username} (${user.id})`} disabled className="disabled-input" />
+
+            <div className="field-block">
+              <label className="lbl">Discord (автоматически)</label>
+              <input
+                className="field"
+                type="text"
+                value={`${user.username} (${user.id})`}
+                disabled
+                style={{ opacity: 0.45, cursor: 'not-allowed' }}
+              />
             </div>
+
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting ? <><span className="btn-spinner" />Отправка...</> : banned ? '🚫 Доступ заблокирован' : '📤 Отправить'}
+              {submitting
+                ? <><span className="btn-spinner" /> ОТПРАВКА...</>
+                : banned
+                  ? '🚫 ДОСТУП ЗАБЛОКИРОВАН'
+                  : '→ ОТПРАВИТЬ'}
             </button>
           </form>
         </div>
@@ -122,28 +162,6 @@ export default function PromotionForm() {
 
       <SubmitOverlay show={success} text="Запрос на повышение отправлен!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
-
-      <style jsx>{`
-        .form-page { min-height: calc(100vh - 60px); padding: 30px; }
-        .back-btn { background: rgba(255, 255, 255, 0.08); color: #aaa; border: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; transition: all 0.3s; font-size: 14px; }
-        .back-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; transform: translateY(-2px); }
-        .form-container { max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.1); animation: fadeIn 0.5s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-        h1 { color: white; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; color: #888; margin-bottom: 8px; }
-        input, textarea, select { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; border-radius: 8px; box-sizing: border-box; }
-        select option { background: #1a1a1a; }
-        .disabled-input { opacity: 0.5; cursor: not-allowed; }
-        .submit-btn { width: 100%; padding: 15px; background: #fff; color: #000; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .submit-btn:hover:not(:disabled) { background: #ccc; transform: translateY(-2px); }
-        .submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
-        .btn-spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.15); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0a0a0a; }
-        .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        .loading-container p { color: #888; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </Layout>
   );
 }
