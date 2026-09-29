@@ -35,16 +35,10 @@ export default function HighRankReportForm() {
       fetch('/api/profile').then(res => res.json()),
       fetch('/api/promotion-conditions').then(res => res.json())
     ]).then(([meData, profileData, conditionsData]) => {
-      if (!meData.user) {
-        router.push('/');
-        return;
-      }
+      if (!meData.user) { router.push('/'); return; }
       setUser(meData.user);
       setIsAdmin(ADMIN_IDS.includes(meData.user.id));
-
-      if (profileData.nickname) {
-        setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
-      }
+      if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
       if (profileData.banned) {
         setBanned(true);
         setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
@@ -72,13 +66,11 @@ export default function HighRankReportForm() {
           workLink: formData.workLink
         })
       });
-
       if (res.ok) {
         setSuccess(true);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
-
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) {
@@ -90,7 +82,6 @@ export default function HighRankReportForm() {
         }
         throw new Error(err.error || 'Доступ запрещён');
       }
-
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
     } catch (error) {
@@ -109,55 +100,101 @@ export default function HighRankReportForm() {
     if (data.message) {
       setConditions(tempConditions);
       setEditConditions(false);
-      setConditionStatus('✅ Сохранено');
+      setConditionStatus('✅ СОХРАНЕНО');
       setTimeout(() => setConditionStatus(''), 2000);
     } else {
-      setConditionStatus('❌ ' + (data.error || 'Ошибка'));
+      setConditionStatus('❌ ' + (data.error || 'ОШИБКА'));
     }
   };
 
-  if (loading) return <div className="loading-container"><div className="loading-spinner"></div><p>Загрузка...</p></div>;
+  if (loading) {
+    return <Layout><div className="loading-line">ЗАГРУЗКА ДАННЫХ...</div></Layout>;
+  }
 
   return (
     <Layout>
-      <div className="form-page">
-        <button onClick={() => router.push('/dashboard')} className="back-btn">← Назад к выбору</button>
+      <div className="form-page-wide">
+        <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
 
-        <div className="layout-row">
-          <div className="form-container">
-            <h1>⚜️ Отчёт на повышение (Хай Ранги)</h1>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Имя Фамилия + Статик *</label>
-                <input type="text" required value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} placeholder="Например: Name Surname 123456" />
+        <div className="split">
+          {/* ЛЕВО: ФОРМА */}
+          <div className="form-shell">
+            <header className="form-head">
+              <div className="fh-stamp">FORM-004 · HIGH-RANK</div>
+              <h1 className="fh-title">Отчёт на повышение HR</h1>
+              <p className="fh-sub">
+                Отчёт для Dep.Head и выше. Приложите ссылку на проделанную работу.
+              </p>
+              <div className="fh-rule" />
+            </header>
+
+            <form onSubmit={handleSubmit} className="form-body">
+              <div className="field-block">
+                <label className="lbl">Имя Фамилия + Статик</label>
+                <input
+                  className="field"
+                  type="text"
+                  required
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  placeholder="Name Surname 123456"
+                />
               </div>
-              <div className="form-group">
-                <label>С какого на какой ранг вы повышаетесь *</label>
-                <select required value={formData.rankRange} onChange={(e) => setFormData({...formData, rankRange: e.target.value})}>
-                  <option value="">-- Выберите диапазон рангов --</option>
-                  {RANK_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+
+              <div className="field-block">
+                <label className="lbl">С какого на какой ранг</label>
+                <select
+                  className="field"
+                  required
+                  value={formData.rankRange}
+                  onChange={(e) => setFormData({ ...formData, rankRange: e.target.value })}
+                >
+                  <option value="">-- ВЫБЕРИТЕ ДИАПАЗОН --</option>
+                  {RANK_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Ссылка на проделанную работу *</label>
-                <textarea required value={formData.workLink} onChange={(e) => setFormData({...formData, workLink: e.target.value})} rows="5" />
+
+              <div className="field-block">
+                <label className="lbl">Ссылка на проделанную работу</label>
+                <textarea
+                  className="field"
+                  required
+                  value={formData.workLink}
+                  onChange={(e) => setFormData({ ...formData, workLink: e.target.value })}
+                  rows="5"
+                  placeholder="https://..."
+                />
               </div>
-              <div className="form-group">
-                <label>Discord ID</label>
-                <input type="text" value={`${user.username} (${user.id})`} disabled className="disabled-input" />
+
+              <div className="field-block">
+                <label className="lbl">Discord (автоматически)</label>
+                <input
+                  className="field"
+                  type="text"
+                  value={`${user.username} (${user.id})`}
+                  disabled
+                  style={{ opacity: 0.45, cursor: 'not-allowed' }}
+                />
               </div>
+
               <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-                {submitting ? <><span className="btn-spinner" />Отправка...</> : banned ? '🚫 Доступ заблокирован' : '📤 Отправить отчёт'}
+                {submitting
+                  ? <><span className="btn-spinner" /> ОТПРАВКА...</>
+                  : banned
+                    ? '🚫 ДОСТУП ЗАБЛОКИРОВАН'
+                    : '→ ОТПРАВИТЬ ОТЧЁТ'}
               </button>
             </form>
           </div>
 
-          <div className="conditions-container">
-            <div className="conditions-header">
-              <h2> Условия для повышения</h2>
+          {/* ПРАВО: УСЛОВИЯ */}
+          <aside className="conditions">
+            <div className="cond-head">
+              <span className="cond-num">ANNEX</span>
+              <h2 className="cond-title">УСЛОВИЯ ДЛЯ ПОВЫШЕНИЯ</h2>
               {isAdmin && !editConditions && (
-                <button className="edit-btn" onClick={() => { setEditConditions(true); setTempConditions(conditions); }}>
-                   Редактировать
+                <button className="cond-edit" onClick={() => { setEditConditions(true); setTempConditions(conditions); }}>
+                  ✎ РЕД.
                 </button>
               )}
             </div>
@@ -165,34 +202,32 @@ export default function HighRankReportForm() {
             {editConditions ? (
               <>
                 <textarea
-                  className="conditions-textarea"
+                  className="field cond-ta"
                   value={tempConditions}
                   onChange={(e) => setTempConditions(e.target.value)}
-                  rows="18"
-                  placeholder="Введите условия для повышения (например, требования по рангам, отчётам, срокам и т.д.)"
+                  rows="16"
+                  placeholder="Введите условия для повышения..."
                 />
-                <div className="conditions-actions">
-                  <button className="save-btn" onClick={saveConditions}>💾 Сохранить</button>
-                  <button className="cancel-btn" onClick={() => setEditConditions(false)}>Отмена</button>
+                <div className="cond-actions">
+                  <button className="btn-mini btn-mini-solid" onClick={saveConditions}>💾 СОХР.</button>
+                  <button className="btn-mini" onClick={() => setEditConditions(false)}>ОТМЕНА</button>
                 </div>
               </>
             ) : (
-              <div className="conditions-view">
+              <div className="cond-body">
                 {conditions ? (
-                  <div style={{ whiteSpace: 'pre-line', lineHeight: '1.7' }}>
-                    {conditions}
-                  </div>
+                  <div className="cond-text">{conditions}</div>
                 ) : (
-                  <p className="empty-conditions">
-                    Условия пока не заполнены.
-                    {isAdmin && ' Нажмите «Редактировать», чтобы добавить.'}
+                  <p className="cond-empty">
+                    УСЛОВИЯ НЕ ЗАПОЛНЕНЫ
+                    {isAdmin && <span className="cond-hint"> · Нажмите «РЕД.»</span>}
                   </p>
                 )}
               </div>
             )}
 
-            {conditionStatus && <p className="condition-status">{conditionStatus}</p>}
-          </div>
+            {conditionStatus && <p className="cond-status">{conditionStatus}</p>}
+          </aside>
         </div>
       </div>
 
@@ -200,51 +235,131 @@ export default function HighRankReportForm() {
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
 
       <style jsx>{`
-        .form-page { min-height: calc(100vh - 60px); padding: 30px; }
-        .back-btn { background: rgba(255, 255, 255, 0.08); color: #aaa; border: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; transition: all 0.3s; font-size: 14px; }
-        .back-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; transform: translateY(-2px); }
+        .form-page-wide {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding-bottom: 30px;
+        }
+        .split {
+          display: flex;
+          gap: 18px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .form-shell { flex: 1 1 420px; min-width: 320px; }
 
-        .layout-row { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; flex-wrap: wrap; }
-        .form-container { flex: 1 1 400px; min-width: 320px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.1); animation: fadeIn 0.5s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-        .conditions-container { flex: 0 0 380px; min-width: 300px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border-radius: 20px; padding: 25px; border: 1px groove rgba(98, 37, 102, 0.35); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); animation: fadeIn 0.6s ease; position: sticky; top: 90px; }
-        .conditions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; }
-        .conditions-header h2 { color: #fff; font-size: 18px; margin: 0; }
-        .edit-btn { background: rgba(64, 42, 105, 0.2); color: #C4C0CC; border: 1px solid rgba(88, 101, 242, 0.5); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-        .edit-btn:hover { background: rgba(88, 101, 242, 0.4); color: white; }
-        .conditions-view { color: #ddd; font-size: 15px; min-height: 200px; max-height: 500px; overflow-y: auto; padding-right: 5px; }
-        .conditions-view::-webkit-scrollbar { width: 6px; }
-        .conditions-view::-webkit-scrollbar-thumb { background: rgba(88, 101, 242, 0.5); border-radius: 3px; }
-        .empty-conditions { color: #888; font-style: italic; text-align: center; padding: 20px 0; }
-        .conditions-textarea { width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(88, 101, 242, 0.4); color: white; border-radius: 10px; font-size: 14px; line-height: 1.6; resize: vertical; box-sizing: border-box; outline: none; font-family: inherit; }
-        .conditions-textarea:focus { border-color: #742F75; box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2); }
-        .conditions-actions { display: flex; gap: 10px; margin-top: 12px; }
-        .save-btn { background: #355F78; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; font-size: 14px; }
-        .save-btn:hover { background: #4752C4; }
-        .cancel-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-        .cancel-btn:hover { background: rgba(255,255,255,0.2); }
-        .condition-status { margin-top: 10px; font-size: 13px; color: #4CAF50; text-align: center; }
+        .conditions {
+          flex: 0 0 380px;
+          min-width: 280px;
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+          position: sticky;
+          top: 100px;
+          animation: formIn 0.5s ease;
+        }
+        .cond-head {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 16px;
+          border-bottom: 1px solid #1f1f1f;
+          background: #0a0a0a;
+        }
+        .cond-num {
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: #555;
+          border: 1px solid #2a2a2a;
+          padding: 2px 6px;
+        }
+        .cond-title {
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 2px;
+          color: #fff;
+          margin: 0;
+          text-transform: uppercase;
+          flex: 1;
+        }
+        .cond-edit {
+          background: transparent;
+          border: 1px solid #333;
+          color: #ccc;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1.6px;
+          padding: 4px 9px;
+          cursor: pointer;
+          transition: all 0.18s;
+        }
+        .cond-edit:hover { background: #fff; color: #000; border-color: #fff; }
 
-        h1 { color: white; margin-bottom: 30px; font-size: 22px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; color: #888; margin-bottom: 8px; }
-        input, textarea, select { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; border-radius: 8px; box-sizing: border-box; }
-        select option { background: #1a1a1a; }
-        .disabled-input { opacity: 0.5; cursor: not-allowed; }
-        .submit-btn { width: 100%; padding: 15px; background: #fff; color: #000; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .submit-btn:hover:not(:disabled) { background: #ccc; transform: translateY(-2px); }
-        .submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
-        .btn-spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.15); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+        .cond-body {
+          padding: 18px;
+          max-height: 520px;
+          overflow-y: auto;
+        }
+        .cond-text {
+          white-space: pre-line;
+          color: #d0d0d0;
+          font-size: 13.5px;
+          line-height: 1.75;
+        }
+        .cond-empty {
+          color: #555;
+          font-family: ui-monospace, monospace;
+          font-size: 10.5px;
+          letter-spacing: 1.4px;
+          text-align: center;
+          padding: 30px 0;
+          text-transform: uppercase;
+        }
+        .cond-hint { color: #888; }
 
-        .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0a0a0a; }
-        .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        .loading-container p { color: #888; }
+        .cond-ta {
+          margin: 14px;
+          min-height: 320px;
+          width: calc(100% - 28px);
+        }
+        .cond-actions {
+          display: flex;
+          gap: 8px;
+          padding: 0 14px 14px;
+        }
+        .btn-mini {
+          flex: 1;
+          padding: 9px 12px;
+          background: transparent;
+          border: 1px solid #333;
+          color: #ccc;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1.6px;
+          transition: all 0.18s;
+        }
+        .btn-mini:hover { background: #fff; color: #000; border-color: #fff; }
+        .btn-mini-solid {
+          background: #fff;
+          color: #000;
+          border-color: #fff;
+          font-weight: 800;
+        }
+        .btn-mini-solid:hover { background: #ccc; border-color: #ccc; }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .cond-status {
+          text-align: center;
+          color: #4caf50;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1.4px;
+          padding: 0 14px 14px;
+          margin: 0;
+        }
 
         @media (max-width: 900px) {
-          .layout-row { flex-direction: column; }
-          .conditions-container { flex: 1 1 auto; width: 100%; position: static; }
+          .conditions { flex: 1 1 auto; width: 100%; position: static; }
         }
       `}</style>
     </Layout>
