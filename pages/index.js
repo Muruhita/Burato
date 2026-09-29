@@ -172,7 +172,7 @@ export default function Home() {
         z-index: 10;
         width: 100%;
         max-width: 440px;
-        background: rgba(12, 12, 12, 0.2);
+        background: rgba(12, 12, 12, 1);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid rgba(255, 255, 255, 0.08);
