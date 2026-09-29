@@ -7,10 +7,13 @@ export default function GlobalBackground() {
   const p5Ref = useRef(null);
   const modeRef = useRef('grid');
 
-  const targetMode = router.pathname === '/' ? 'radar' : 'grid';
+  const isHome = router.pathname === '/';
+  const targetMode = isHome ? 'radar' : 'grid';
   modeRef.current = targetMode;
 
   useEffect(() => {
+    if (isHome) return; // на главной фон рисует CloudBackground
+
     const boot = () => {
       if (p5Ref.current) return;
 
@@ -94,13 +97,11 @@ export default function GlobalBackground() {
           const sx = -(gridOffX % spacing);
           const sy = -(gridOffY % spacing);
 
-          // линии сетки
           p.stroke(255, 255, 255, 8);
           p.strokeWeight(1);
           for (let x = sx; x < p.width + spacing; x += spacing) p.line(x, 0, x, p.height);
           for (let y = sy; y < p.height + spacing; y += spacing) p.line(0, y, p.width, y);
 
-          // узлы на пересечениях
           p.noStroke();
           p.fill(255, 255, 255, 20);
           for (let x = sx; x < p.width + spacing; x += spacing) {
@@ -109,7 +110,6 @@ export default function GlobalBackground() {
             }
           }
 
-          // цели-точки
           for (const t of gridTargets) {
             t.x += Math.cos(t.dir) * t.speed;
             t.y += Math.sin(t.dir) * t.speed;
@@ -126,7 +126,6 @@ export default function GlobalBackground() {
             p.circle(t.x, t.y, t.r * 8);
           }
 
-          // скан-линия
           scanY += 2.2;
           if (scanY > p.height + 200) scanY = -200;
 
@@ -141,7 +140,6 @@ export default function GlobalBackground() {
           p.strokeWeight(1);
           p.line(0, scanY, p.width, scanY);
 
-          // усиленные сегменты по краям
           p.stroke(255, 255, 255, 70);
           p.line(0, scanY, 40, scanY);
           p.line(p.width - 40, scanY, p.width, scanY);
@@ -158,27 +156,22 @@ export default function GlobalBackground() {
           p.push();
           p.translate(cx, cy);
 
-          // кольца
           p.noFill();
           p.stroke(255, 255, 255, 12);
           p.strokeWeight(1);
           for (let r = maxR * 0.25; r <= maxR + 0.5; r += maxR * 0.25) {
             p.circle(0, 0, r * 2);
           }
-          // перекрестье
           p.stroke(255, 255, 255, 20);
           p.line(-maxR, 0, maxR, 0);
           p.line(0, -maxR, 0, maxR);
 
-          // центр
           p.stroke(255, 255, 255, 60);
           p.circle(0, 0, 6);
 
-          // луч
           sweep += 0.012;
           if (sweep > p.TWO_PI) sweep -= p.TWO_PI;
 
-          // шлейф
           for (let i = 0; i < 40; i++) {
             const a = sweep - i * 0.02;
             const alpha = (40 - i) * 0.008;
@@ -187,12 +180,10 @@ export default function GlobalBackground() {
             p.line(0, 0, Math.cos(a) * maxR, Math.sin(a) * maxR);
           }
 
-          // яркая линия
           p.stroke(255, 255, 255, 120);
           p.strokeWeight(1.5);
           p.line(0, 0, Math.cos(sweep) * maxR, Math.sin(sweep) * maxR);
 
-          // цели
           for (const t of radarTargets) {
             t.baseA += t.drift;
             t.pulse += t.pulseSpeed;
@@ -253,7 +244,10 @@ export default function GlobalBackground() {
         p5Ref.current = null;
       }
     };
-  }, []);
+  }, [isHome]);
+
+  // На главной фон рисует CloudBackground — не дублируем
+  if (isHome) return null;
 
   return (
     <div
