@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 export default function WithdrawalForm() {
   const router = useRouter();
@@ -16,14 +16,17 @@ export default function WithdrawalForm() {
   const [banUntil, setBanUntil] = useState(null);
 
   useEffect(() => {
-    fetch('/api/profile').then(res => res.json()).then(data => {
-      if (data.nickname) setNickname(data.nickname);
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
-    }).catch(() => {});
+    fetch('/api/profile')
+      .then(res => res.json())
+      .then(data => {
+        if (data.nickname) setNickname(data.nickname);
+        if (data.banned) {
+          setBanned(true);
+          setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
+          setBanUntil(data.banUntil || null);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
@@ -35,13 +38,11 @@ export default function WithdrawalForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'withdrawal', fullName: nickname, ...formData })
       });
-
       if (res.ok) {
         setSuccess(true);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
-
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) {
@@ -53,7 +54,6 @@ export default function WithdrawalForm() {
         }
         throw new Error(err.error || 'Доступ запрещён');
       }
-
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
     } catch (error) {
@@ -65,24 +65,58 @@ export default function WithdrawalForm() {
   return (
     <Layout>
       <div className="form-page">
-        <button onClick={() => router.push('/dashboard')} className="back-btn">← Назад к выбору</button>
-        <div className="form-container">
-          <h1>🔑 Снятие ЧС</h1>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Имя Фамилия + Статик</label>
-              <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} required placeholder="Например: Name Surname 123456" />
+        <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
+
+        <div className="form-shell">
+          <header className="form-head">
+            <div className="fh-stamp">FORM-009 · CLEARANCE</div>
+            <h1 className="fh-title">Снятие ЧС</h1>
+            <p className="fh-sub">
+              Запрос на снятие чёрного списка. При наличии — укажите причину и дату выдачи ЧС.
+            </p>
+            <div className="fh-rule" />
+          </header>
+
+          <form onSubmit={handleSubmit} className="form-body">
+            <div className="field-block">
+              <label className="lbl">Имя Фамилия + Статик</label>
+              <input
+                className="field"
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                required
+                placeholder="Name Surname 123456"
+              />
             </div>
-            <div className="form-group">
-              <label>Причина ЧС (если известна)</label>
-              <textarea value={formData.reason} onChange={(e) => setFormData({...formData, reason: e.target.value})} rows="4" placeholder="Введите причину..." />
+
+            <div className="field-block">
+              <label className="lbl">Причина ЧС (если известна)</label>
+              <textarea
+                className="field"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                rows="4"
+                placeholder="Введите причину..."
+              />
             </div>
-            <div className="form-group">
-              <label>Дата выдачи ЧС (если известна)</label>
-              <input type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+
+            <div className="field-block">
+              <label className="lbl">Дата выдачи ЧС (если известна)</label>
+              <input
+                className="field"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              />
             </div>
+
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting ? <><span className="btn-spinner" />Отправка...</> : banned ? '🚫 Доступ заблокирован' : '📤 Отправить'}
+              {submitting
+                ? <><span className="btn-spinner" /> ОТПРАВКА...</>
+                : banned
+                  ? '🚫 ДОСТУП ЗАБЛОКИРОВАН'
+                  : '→ ОТПРАВИТЬ'}
             </button>
           </form>
         </div>
@@ -90,23 +124,6 @@ export default function WithdrawalForm() {
 
       <SubmitOverlay show={success} text="Заявка на снятие ЧС отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
-
-      <style jsx>{`
-        .form-page { min-height: calc(100vh - 60px); padding: 30px; }
-        .back-btn { background: rgba(255, 255, 255, 0.08); color: #aaa; border: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; transition: all 0.3s; font-size: 14px; }
-        .back-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; transform: translateY(-2px); }
-        .form-container { max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.1); animation: fadeIn 0.5s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-        h1 { color: white; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; color: #888; margin-bottom: 8px; }
-        input, textarea { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; border-radius: 8px; box-sizing: border-box; }
-        .submit-btn { width: 100%; padding: 15px; background: #fff; color: #000; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .submit-btn:hover:not(:disabled) { background: #ccc; transform: translateY(-2px); }
-        .submit-btn:disabled { opacity: 0.75; cursor: not-allowed; transform: none; }
-        .btn-spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.15); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </Layout>
   );
 }
