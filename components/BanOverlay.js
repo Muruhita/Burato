@@ -1,8 +1,8 @@
 import { useRouter } from 'next/router';
 
-export default function BanOverlay({ 
-  show, 
-  reason = 'Вы были заблокированы', 
+export default function BanOverlay({
+  show,
+  reason = 'Вы были заблокированы',
   until = null,
   onClose = null
 }) {
@@ -13,280 +13,453 @@ export default function BanOverlay({
     router.push('/dashboard');
   };
 
+  if (!show) return null;
+
   return (
-    <>
-      {show && (
-        <div className="ban-overlay">
-          <div className="ban-scanlines" />
-          <div className="ban-box">
-            <div className="ban-icon-wrapper">
-              <svg className="ban-icon" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L1 21h22L12 2z" 
-                      stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-                <path d="M12 9v6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-                <circle cx="12" cy="18" r="1.1" fill="currentColor"/>
-              </svg>
-            </div>
+    <div className="ban-overlay">
+      {/* CRT-шум */}
+      <div className="ban-scanlines" />
+      {/* Красная пульсирующая аура */}
+      <div className="ban-aura" />
 
-            <h2 className="ban-title">ДОСТУП ЗАБЛОКИРОВАН</h2>
-            <div className="ban-divider" />
-
-            <p className="ban-reason">{reason}</p>
-            {until && <p className="ban-until">До: {until}</p>}
-
-            <p className="ban-hint">
-              Если вы считаете это ошибкой — обратитесь в <strong>Discord</strong> к @muruh1ta(Мурчик, ASS|AF), в крайняк к Dep.Dir или Foren(COD) .
-            </p>
-
-            <button className="ban-btn" onClick={handleClose}>
-              Вернуться в панель
-            </button>
-          </div>
+      <div className="ban-box">
+        {/* Верхняя служебная полоса */}
+        <div className="bb-topstrip">
+          <span className="bb-mark">■</span>
+          <span className="bb-label">ACCESS DENIED</span>
+          <span className="bb-spacer" />
+          <span className="bb-code">ERR-403</span>
         </div>
-      )}
+
+        {/* Иконка — предупреждение */}
+        <div className="bb-icon-wrap">
+          <div className="bb-icon-ring" />
+          <div className="bb-icon-ring-inner" />
+          <svg className="bb-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L1 21h22L12 2z"
+                  stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+            <path d="M12 9v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="12" cy="18" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+
+        {/* Заголовок с глитч-эффектом */}
+        <h2 className="bb-title">
+          <span className="bb-glitch" data-text="ДОСТУП ЗАБЛОКИРОВАН">ДОСТУП ЗАБЛОКИРОВАН</span>
+        </h2>
+
+        <div className="bb-divider">
+          <span className="bb-div-line" />
+          <span className="bb-div-mark">§</span>
+          <span className="bb-div-line" />
+        </div>
+
+        {/* Причина */}
+        <div className="bb-reason-block">
+          <div className="bb-reason-label">/// ПРИЧИНА</div>
+          <div className="bb-reason">{reason}</div>
+        </div>
+
+        {/* Срок */}
+        {until && (
+          <div className="bb-until-block">
+            <span className="bb-until-key">СРОК</span>
+            <span className="bb-until-val">{until}</span>
+          </div>
+        )}
+
+        {/* Подсказка */}
+        <div className="bb-hint">
+          <div className="bb-hint-label">/// ОБЖАЛОВАНИЕ</div>
+          <p className="bb-hint-text">
+            Если вы считаете это ошибкой — обратитесь в Discord к <strong>@muruh1ta</strong> (ASS|AF), в крайнем случае к <strong>Dep.Dir</strong> или <strong>Foren (COD)</strong>.
+          </p>
+        </div>
+
+        {/* Кнопка */}
+        <button className="bb-btn" onClick={handleClose}>
+          <span className="bb-btn-arrow">←</span>
+          <span>ВЕРНУТЬСЯ В ПАНЕЛЬ</span>
+        </button>
+
+        {/* Углы */}
+        <span className="bb-corner bb-corner-tl" />
+        <span className="bb-corner bb-corner-tr" />
+        <span className="bb-corner bb-corner-bl" />
+        <span className="bb-corner bb-corner-br" />
+      </div>
 
       <style jsx>{`
         .ban-overlay {
           position: fixed;
           inset: 0;
-          background: radial-gradient(ellipse at center, rgba(60, 0, 0, 0.92) 0%, rgba(10, 0, 0, 0.96) 100%);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          background: radial-gradient(ellipse at center, rgba(30, 5, 5, 0.94) 0%, rgba(5, 5, 5, 0.98) 100%);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 99999;
-          animation: banOverlayIn 0.4s ease forwards;
+          animation: overlayIn 0.35s ease;
           overflow: hidden;
+          padding: 20px;
         }
 
-        /* Полосатая "scanline" текстура */
+        /* ─── CRT-шум ─── */
         .ban-scanlines {
           position: absolute;
           inset: 0;
           background: repeating-linear-gradient(
             0deg,
-            rgba(255, 0, 0, 0.04) 0px,
-            rgba(255, 0, 0, 0.04) 2px,
-            transparent 2px,
-            transparent 4px
+            rgba(255, 60, 60, 0.03) 0px,
+            rgba(255, 60, 60, 0.03) 1px,
+            transparent 1px,
+            transparent 3px
           );
           pointer-events: none;
           animation: scanMove 8s linear infinite;
         }
+        @keyframes scanMove {
+          0%   { background-position: 0 0; }
+          100% { background-position: 0 120px; }
+        }
 
+        /* ─── Красная аура ─── */
+        .ban-aura {
+          position: absolute;
+          width: 620px;
+          height: 620px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255, 40, 40, 0.22), transparent 65%);
+          filter: blur(80px);
+          pointer-events: none;
+          animation: auraPulse 3.2s ease-in-out infinite;
+        }
+        @keyframes auraPulse {
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50%      { opacity: 1;   transform: scale(1.1); }
+        }
+
+        /* ─── Основная коробка ─── */
         .ban-box {
           position: relative;
-          background: linear-gradient(145deg, rgba(28, 8, 8, 0.98), rgba(15, 4, 4, 0.98));
-          border: 1.5px solid rgba(255, 50, 50, 0.55);
-          border-radius: 22px;
-          padding: 44px 52px;
-          max-width: 520px;
-          width: calc(100% - 40px);
-          text-align: center;
-          box-shadow:
-            0 0 0 1px rgba(255, 0, 0, 0.15),
-            0 20px 70px rgba(0, 0, 0, 0.7),
-            0 0 100px rgba(255, 20, 20, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          animation: banBoxIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-                     banGlow 2.5s ease-in-out 0.6s infinite;
-        }
-
-        .ban-icon-wrapper {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 96px;
-          height: 96px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(255, 40, 40, 0.18), transparent 70%);
-          margin-bottom: 20px;
-          animation: iconPulse 1.8s ease-in-out infinite;
-        }
-
-        .ban-icon {
-          width: 56px;
-          height: 56px;
-          color: #ff4444;
-          filter: drop-shadow(0 0 12px rgba(255, 60, 60, 0.8));
-          animation: iconShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.3s;
-        }
-
-        .ban-title {
-          color: #ff5252;
-          font-size: 22px;
-          font-weight: 800;
-          letter-spacing: 2px;
-          margin: 0 0 16px 0;
-          text-shadow:
-            0 0 10px rgba(255, 60, 60, 0.7),
-            0 0 30px rgba(255, 30, 30, 0.4);
-          opacity: 0;
-          animation: titleIn 0.5s ease 0.4s forwards, glitch 3s ease-in-out 1.5s infinite;
-        }
-
-        .ban-divider {
-          width: 60px;
-          height: 2px;
-          background: linear-gradient(90deg, transparent, #ff4444, transparent);
-          margin: 0 auto 20px;
-          opacity: 0;
-          animation: titleIn 0.5s ease 0.5s forwards;
-        }
-
-        .ban-reason {
-          color: #e0e0e0;
-          font-size: 15px;
-          line-height: 1.6;
-          margin: 0 0 10px 0;
-          padding: 14px 18px;
-          background: rgba(255, 60, 60, 0.08);
-          border-left: 3px solid #ff4444;
-          border-radius: 8px;
-          text-align: left;
-          white-space: pre-line;
-          opacity: 0;
-          animation: titleIn 0.5s ease 0.6s forwards;
-        }
-
-        .ban-until {
-          color: #ff8888;
-          font-size: 13px;
-          font-weight: 600;
-          margin: 0 0 14px 0;
-          opacity: 0;
-          animation: titleIn 0.5s ease 0.7s forwards;
-        }
-
-        .ban-hint {
-          color: #888;
-          font-size: 13px;
-          line-height: 1.5;
-          margin: 0 0 24px 0;
-          opacity: 0;
-          animation: titleIn 0.5s ease 0.8s forwards;
-        }
-        .ban-hint strong {
-          color: #b0b0b0;
-        }
-
-        .ban-btn {
           width: 100%;
-          padding: 14px 20px;
-          background: rgba(255, 60, 60, 0.12);
-          color: #ff6b6b;
-          border: 1.5px solid rgba(255, 60, 60, 0.55);
-          border-radius: 10px;
-          font-weight: 700;
-          font-size: 15px;
-          cursor: pointer;
-          letter-spacing: 0.5px;
-          transition: all 0.25s ease;
-          opacity: 0;
-          animation: titleIn 0.5s ease 0.9s forwards;
+          max-width: 520px;
+          background: #0a0a0a;
+          border: 1px solid #2a1a1a;
+          padding: 0 0 28px;
+          overflow: hidden;
+          animation: boxIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+          box-shadow:
+            0 30px 80px rgba(0, 0, 0, 0.7),
+            0 0 0 1px rgba(255, 60, 60, 0.06),
+            0 0 100px rgba(255, 20, 20, 0.2);
         }
-        .ban-btn:hover {
-          background: rgba(255, 60, 60, 0.25);
-          color: #fff;
-          transform: translateY(-2px);
-          box-shadow: 0 10px 30px rgba(255, 40, 40, 0.35);
-        }
-        .ban-btn:active {
-          transform: translateY(0);
-        }
-
-        /* === КЕЙФРЕЙМЫ === */
-        @keyframes banOverlayIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes banBoxIn {
-          0% { transform: scale(0.85) translateY(20px); opacity: 0; }
-          60% { transform: scale(1.02) translateY(-4px); }
+        @keyframes boxIn {
+          0%   { transform: scale(0.9) translateY(20px); opacity: 0; }
           100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
-        @keyframes banGlow {
+        /* ─── Верхняя полоса ─── */
+        .bb-topstrip {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 16px;
+          background: #150808;
+          border-bottom: 1px solid #3a1a1a;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 2.4px;
+          text-transform: uppercase;
+          color: #a06060;
+        }
+        .bb-mark { color: #ff4444; font-size: 11px; line-height: 1; }
+        .bb-label { color: #ff8080; font-weight: 800; }
+        .bb-spacer { flex: 1; }
+        .bb-code {
+          color: #553030;
+          font-weight: 700;
+        }
+
+        /* ─── Иконка ─── */
+        .bb-icon-wrap {
+          position: relative;
+          width: 92px;
+          height: 92px;
+          margin: 32px auto 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .bb-icon-ring {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 1px solid rgba(255, 60, 60, 0.35);
+          animation: ringPulse 2.2s ease-in-out infinite;
+        }
+        .bb-icon-ring-inner {
+          position: absolute;
+          inset: 12px;
+          border-radius: 50%;
+          border: 1px dashed rgba(255, 60, 60, 0.25);
+          animation: spinSlow 12s linear infinite;
+        }
+        @keyframes spinSlow {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes ringPulse {
           0%, 100% {
-            box-shadow:
-              0 0 0 1px rgba(255, 0, 0, 0.15),
-              0 20px 70px rgba(0, 0, 0, 0.7),
-              0 0 100px rgba(255, 20, 20, 0.35),
-              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 0 rgba(255, 60, 60, 0.4);
+            border-color: rgba(255, 60, 60, 0.35);
           }
           50% {
-            box-shadow:
-              0 0 0 1px rgba(255, 0, 0, 0.3),
-              0 20px 70px rgba(0, 0, 0, 0.7),
-              0 0 130px rgba(255, 20, 20, 0.55),
-              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 14px rgba(255, 60, 60, 0);
+            border-color: rgba(255, 60, 60, 0.7);
           }
         }
-
-        @keyframes iconPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.08); }
+        .bb-icon {
+          position: relative;
+          width: 44px;
+          height: 44px;
+          color: #ff4444;
+          filter: drop-shadow(0 0 10px rgba(255, 60, 60, 0.7));
+          animation: iconShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.35s;
+          z-index: 1;
         }
-
         @keyframes iconShake {
           0%, 100% { transform: translateX(0); }
-          15% { transform: translateX(-6px) rotate(-3deg); }
-          30% { transform: translateX(5px) rotate(3deg); }
-          45% { transform: translateX(-4px) rotate(-2deg); }
-          60% { transform: translateX(3px) rotate(2deg); }
+          15% { transform: translateX(-5px) rotate(-3deg); }
+          30% { transform: translateX(4px) rotate(3deg); }
+          45% { transform: translateX(-3px) rotate(-2deg); }
+          60% { transform: translateX(2px) rotate(2deg); }
           80% { transform: translateX(-1px); }
         }
 
-        @keyframes titleIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
+        /* ─── Заголовок ─── */
+        .bb-title {
+          text-align: center;
+          color: #ff5252;
+          font-family: ui-monospace, monospace;
+          font-size: 18px;
+          font-weight: 900;
+          letter-spacing: 3px;
+          margin: 0 24px;
+          line-height: 1.2;
+          text-transform: uppercase;
+        }
+        .bb-glitch {
+          position: relative;
+          display: inline-block;
+        }
+        .bb-glitch::before,
+        .bb-glitch::after {
+          content: attr(data-text);
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+        }
+        .bb-glitch::before {
+          color: #00e5ff;
+          animation: glitchBefore 3.5s infinite;
+          clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+        }
+        .bb-glitch::after {
+          color: #ff44aa;
+          animation: glitchAfter 3.5s infinite;
+          clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+        }
+        @keyframes glitchBefore {
+          0%, 92%, 100% { opacity: 0; transform: translate(0); }
+          93% { opacity: 0.9; transform: translate(-2px, -1px); }
+          95% { opacity: 0.9; transform: translate(2px, 1px); }
+          97% { opacity: 0; }
+        }
+        @keyframes glitchAfter {
+          0%, 92%, 100% { opacity: 0; transform: translate(0); }
+          94% { opacity: 0.9; transform: translate(2px, 1px); }
+          96% { opacity: 0.9; transform: translate(-2px, -1px); }
+          98% { opacity: 0; }
         }
 
-        @keyframes glitch {
-          0%, 90%, 100% {
-            text-shadow:
-              0 0 10px rgba(255, 60, 60, 0.7),
-              0 0 30px rgba(255, 30, 30, 0.4);
-            transform: translateX(0);
-          }
-          92% {
-            text-shadow:
-              -2px 0 0 #00ffff,
-              2px 0 0 #ff00ff,
-              0 0 10px rgba(255, 60, 60, 0.7);
-            transform: translateX(-2px);
-          }
-          94% {
-            text-shadow:
-              2px 0 0 #00ffff,
-              -2px 0 0 #ff00ff,
-              0 0 30px rgba(255, 30, 30, 0.4);
-            transform: translateX(2px);
-          }
-          96% {
-            text-shadow:
-              -1px 0 0 #00ffff,
-              1px 0 0 #ff00ff,
-              0 0 10px rgba(255, 60, 60, 0.7);
-            transform: translateX(-1px);
-          }
+        /* ─── Разделитель ─── */
+        .bb-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 20px 40px 22px;
+        }
+        .bb-div-line {
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #3a1a1a, transparent);
+        }
+        .bb-div-mark {
+          color: #ff4444;
+          font-family: ui-monospace, monospace;
+          font-size: 12px;
+          opacity: 0.6;
         }
 
-        @keyframes scanMove {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 100px; }
+        /* ─── Блок причины ─── */
+        .bb-reason-block {
+          margin: 0 24px 18px;
+          padding: 14px 16px;
+          background: #080404;
+          border: 1px solid #2a1a1a;
+          border-left: 3px solid #ff4444;
+        }
+        .bb-reason-label {
+          color: #a06060;
+          font-family: ui-monospace, monospace;
+          font-size: 9.5px;
+          letter-spacing: 2.4px;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .bb-reason {
+          color: #e8e0e0;
+          font-size: 14px;
+          line-height: 1.6;
+          white-space: pre-line;
         }
 
-        @media (max-width: 500px) {
-          .ban-box { padding: 32px 26px; border-radius: 18px; }
-          .ban-icon-wrapper { width: 76px; height: 76px; }
-          .ban-icon { width: 44px; height: 44px; }
-          .ban-title { font-size: 17px; letter-spacing: 1.5px; }
-          .ban-reason { font-size: 14px; }
+        /* ─── Срок ─── */
+        .bb-until-block {
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          margin: 0 24px 18px;
+          padding: 10px 16px;
+          background: #080404;
+          border: 1px dashed #3a1a1a;
+          font-family: ui-monospace, monospace;
+        }
+        .bb-until-key {
+          color: #a06060;
+          font-size: 10px;
+          letter-spacing: 2.4px;
+          text-transform: uppercase;
+          flex-shrink: 0;
+        }
+        .bb-until-val {
+          color: #ff8080;
+          font-size: 14px;
+          font-weight: 800;
+          letter-spacing: 1px;
+        }
+
+        /* ─── Обжалование ─── */
+        .bb-hint {
+          margin: 0 24px 22px;
+          padding: 14px 16px;
+          background: #050505;
+          border: 1px solid #1f1f1f;
+        }
+        .bb-hint-label {
+          color: #666;
+          font-family: ui-monospace, monospace;
+          font-size: 9.5px;
+          letter-spacing: 2.4px;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .bb-hint-text {
+          color: #999;
+          font-size: 12.5px;
+          line-height: 1.65;
+          margin: 0;
+        }
+        .bb-hint-text strong {
+          color: #ddd;
+          font-weight: 700;
+        }
+
+        /* ─── Кнопка ─── */
+        .bb-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          margin: 0 24px;
+          width: calc(100% - 48px);
+          padding: 14px 20px;
+          background: transparent;
+          color: #ff5252;
+          border: 1px solid #3a1a1a;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 11.5px;
+          font-weight: 800;
+          letter-spacing: 2.4px;
+          text-transform: uppercase;
+          transition: all 0.22s ease;
+        }
+        .bb-btn:hover {
+          background: #ff4444;
+          border-color: #ff4444;
+          color: #fff;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 30px rgba(255, 60, 60, 0.4);
+        }
+        .bb-btn:active {
+          transform: translateY(0);
+        }
+        .bb-btn-arrow {
+          font-size: 14px;
+          line-height: 1;
+          transition: transform 0.2s;
+        }
+        .bb-btn:hover .bb-btn-arrow {
+          transform: translateX(-3px);
+        }
+
+        /* ─── Углы ─── */
+        .bb-corner {
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          border-color: #ff4444;
+          border-style: solid;
+          border-width: 0;
+          opacity: 0.7;
+          pointer-events: none;
+        }
+        .bb-corner-tl { top: 6px;  left: 6px;  border-top-width: 1px; border-left-width: 1px; }
+        .bb-corner-tr { top: 6px;  right: 6px; border-top-width: 1px; border-right-width: 1px; }
+        .bb-corner-bl { bottom: 6px; left: 6px;  border-bottom-width: 1px; border-left-width: 1px; }
+        .bb-corner-br { bottom: 6px; right: 6px; border-bottom-width: 1px; border-right-width: 1px; }
+
+        /* ─── Анимация входа ─── */
+        @keyframes overlayIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        /* ─── Мобильная адаптация ─── */
+        @media (max-width: 560px) {
+          .ban-box { padding-bottom: 22px; }
+          .bb-topstrip { padding: 7px 12px; font-size: 9px; letter-spacing: 1.8px; }
+          .bb-icon-wrap { width: 76px; height: 76px; margin: 24px auto 18px; }
+          .bb-icon { width: 36px; height: 36px; }
+          .bb-title { font-size: 15px; letter-spacing: 2px; margin: 0 18px; }
+          .bb-divider { margin: 16px 24px 18px; }
+          .bb-reason-block,
+          .bb-until-block,
+          .bb-hint,
+          .bb-btn {
+            margin-left: 18px;
+            margin-right: 18px;
+          }
+          .bb-btn { width: calc(100% - 36px); font-size: 10.5px; padding: 13px 16px; }
+          .bb-reason { font-size: 13px; }
+          .bb-hint-text { font-size: 12px; }
         }
       `}</style>
-    </>
+    </div>
   );
 }
