@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   const params = new URLSearchParams({
     client_id: process.env.DISCORD_CLIENT_ID,
-    redirect_uri: process.env.DISCORD_REDIRECT_URI || 'https://bot-kik.vercel.app/api/auth',
+    redirect_uri: process.env.DISCORD_REDIRECT_URI || 'https://fib-bt-check-sus.vercel.app/api/auth',
     response_type: 'code',
     scope: 'identify',
     state

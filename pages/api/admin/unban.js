@@ -1,4 +1,5 @@
-import { removeBlacklist, clearSpamLog } from '../../../lib/antispam';
+import { clearSpamLog } from '../../../lib/antispam';
+import { removeFromBlacklist } from '../../../lib/blacklist';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
 import { logAdminAction, logError } from '../../../lib/logger';
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    await removeBlacklist(userId);
+    await removeFromBlacklist(userId);
     await clearSpamLog(userId);
 
     logAdminAction({

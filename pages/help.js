@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { ADMIN_IDS } from '../lib/admins';
 
 export default function Help() {
-  const [content, setContent] = useState('Загрузка...');
+  const [content, setContent] = useState('ЗАГРУЗКА...');
   const [isAdmin, setIsAdmin] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [newContent, setNewContent] = useState('');
@@ -15,15 +15,11 @@ export default function Help() {
         setContent(data.content || 'Информация пока не заполнена.');
         setNewContent(data.content || '');
       })
-      .catch(() => {
-        setContent('Не удалось загрузить справку.');
-      });
+      .catch(() => setContent('Не удалось загрузить справку.'));
 
     fetch('/api/me')
       .then(res => res.json())
-      .then(data => {
-        setIsAdmin(data.user && ADMIN_IDS.includes(data.user.id));
-      });
+      .then(data => setIsAdmin(data.user && ADMIN_IDS.includes(data.user.id)));
   }, []);
 
   const saveContent = async () => {
@@ -41,172 +37,222 @@ export default function Help() {
 
   return (
     <Layout>
-      <div className="help-container">
-        <h1>Справка</h1>
+      <div className="info">
+        <header className="page-head">
+          <div className="ph-stamp">DOC · HELP · V7</div>
+          <h1 className="ph-title">СПРАВКА<span className="ph-dot">.</span></h1>
+          <p className="ph-sub">Инструкции и ответы на частые вопросы по системе FIB Forms</p>
+          <div className="ph-rule" />
+        </header>
 
-        <div className="content-box">
-          {editMode ? (
-            <>
-              <div className="edit-header">
-                <span>Режим редактирования (Shift+Enter — новый абзац)</span>
-              </div>
-              <textarea
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-                rows="12"
-                placeholder="Введите текст справки. Используйте Shift+Enter для переноса строки."
-                className="edit-textarea"
-              />
-              <div className="edit-actions">
-                <button className="save-btn" onClick={saveContent}>💾 Сохранить</button>
-                <button className="cancel-btn" onClick={() => setEditMode(false)}>Отмена</button>
-              </div>
-            </>
-          ) : (
-            <div className="view-mode">
-              {/* Самое важное: inline style whiteSpace: 'pre-line' сохраняет все переносы строк! */}
-              <div className="content-text" style={{ whiteSpace: 'pre-line', lineHeight: '1.7', fontSize: '16px', color: '#e0e0e0' }}>
-                {content}
-              </div>
-              {isAdmin && (
-                <button className="edit-btn" onClick={() => setEditMode(true)}>
-                   Редактировать
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">01</span>
+            <h2 className="p-title">СОДЕРЖАНИЕ</h2>
+            <span className="p-tag">{editMode ? 'EDIT' : 'VIEW'}</span>
+            {isAdmin && !editMode && (
+              <button className="p-edit" onClick={() => setEditMode(true)}>✎ РЕД.</button>
+            )}
+          </div>
+
+          <div className="panel-body">
+            {editMode ? (
+              <>
+                <span className="lbl">ТЕКСТ СПРАВКИ</span>
+                <textarea
+                  className="field"
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  rows="16"
+                  placeholder="Введите текст справки. Переносы строк сохраняются."
+                />
+                <div className="row">
+                  <button className="btn btn-solid" onClick={saveContent}>💾 СОХРАНИТЬ</button>
+                  <button className="btn" onClick={() => setEditMode(false)}>ОТМЕНА</button>
+                </div>
+              </>
+            ) : (
+              <div className="text-content">{content}</div>
+            )}
+          </div>
+        </section>
       </div>
 
       <style jsx>{`
-        .help-container {
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
+        .info { max-width: 860px; margin: 0 auto; }
+
+        .page-head { margin-bottom: 26px; animation: fadeIn 0.45s ease; }
+        .ph-stamp {
+          display: inline-block;
+          padding: 3px 10px;
+          border: 1px solid #333;
+          color: #888;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          margin-bottom: 14px;
         }
-        h1 {
+        .ph-title {
+          font-size: 42px;
+          font-weight: 900;
+          letter-spacing: 3px;
+          margin: 0;
           color: #fff;
-          text-align: center;
-          margin-bottom: 30px;
-          font-size: 36px;
-          text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-          animation: fadeIn 0.5s ease;
+          line-height: 1;
+          text-transform: uppercase;
         }
-
-        .content-box {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 16px;
-          padding: 30px;
-          position: relative;
-          backdrop-filter: blur(10px);
-          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-          transition: border-color 0.3s ease;
-          animation: slideUp 0.5s ease;
+        .ph-dot {
+          color: #fff;
+          animation: blink 1.2s steps(2, start) infinite;
         }
-
-        .content-box:hover {
-          border-color: rgba(255, 255, 255, 0.3);
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          50.01%, 100% { opacity: 0.15; }
         }
-
-        .view-mode {
-          min-height: 150px;
-        }
-
-        .content-text {
-          word-break: break-word;
-        }
-
-        .edit-header {
-          color: #aaa;
+        .ph-sub {
+          color: #888;
           font-size: 13px;
-          margin-bottom: 15px;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
-          padding-bottom: 10px;
+          margin: 12px 0 0;
+        }
+        .ph-rule {
+          height: 1px;
+          background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%);
+          margin: 18px 0 0;
         }
 
-        .edit-textarea {
-          width: 100%;
-          background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 10px;
+        .panel {
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+          animation: cardIn 0.45s ease;
+        }
+        .panel-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 18px;
+          border-bottom: 1px solid #1f1f1f;
+          background: #0a0a0a;
+        }
+        .p-num {
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          color: #666;
+          font-weight: 700;
+        }
+        .p-title {
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 2.4px;
           color: #fff;
-          padding: 15px;
-          font-size: 16px;
-          line-height: 1.6;
-          resize: vertical;
-          min-height: 200px;
+          margin: 0;
+          text-transform: uppercase;
+          flex: 1;
+        }
+        .p-tag {
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: #666;
+          border: 1px solid #2a2a2a;
+          padding: 2px 8px;
+        }
+        .p-edit {
+          background: transparent;
+          border: 1px solid #333;
+          color: #ccc;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1.6px;
+          padding: 4px 10px;
+          cursor: pointer;
+          transition: all 0.18s;
+        }
+        .p-edit:hover { background: #fff; color: #000; border-color: #fff; }
+
+        .panel-body { padding: 22px; }
+
+        .lbl {
+          display: block;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #666;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .lbl::before { content: '▸ '; color: #333; }
+
+        .field {
+          width: 100%;
+          padding: 12px 14px;
+          background: #060606;
+          border: 1px solid #262626;
+          color: #fff;
+          border-radius: 0;
+          font-size: 14px;
+          font-family: inherit;
+          box-sizing: border-box;
           outline: none;
-          transition: border-color 0.3s;
+          transition: border-color 0.2s;
+        }
+        .field:focus { border-color: #fff; }
+        textarea.field {
+          resize: vertical;
+          min-height: 260px;
+          line-height: 1.7;
         }
 
-        .edit-textarea:focus {
-          border-color: #5865F2;
+        .text-content {
+          white-space: pre-line;
+          line-height: 1.8;
+          font-size: 15px;
+          color: #d8d8d8;
+          word-break: break-word;
+          min-height: 120px;
         }
 
-        .edit-actions {
+        .row {
           display: flex;
           gap: 10px;
-          margin-top: 15px;
+          margin-top: 14px;
+          flex-wrap: wrap;
         }
-
-        .save-btn {
-          background: #5865F2;
-          color: white;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 8px;
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 11px 18px;
+          background: transparent;
+          border: 1px solid #333;
+          color: #eaeaea;
           cursor: pointer;
-          font-weight: 600;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
           transition: all 0.2s;
         }
-
-        .save-btn:hover {
-          background: #4752C4;
-          transform: translateY(-2px);
+        .btn:hover { background: #fff; border-color: #fff; color: #000; }
+        .btn-solid {
+          background: #fff;
+          color: #000;
+          border-color: #fff;
+          font-weight: 800;
         }
+        .btn-solid:hover { background: #ccc; border-color: #ccc; }
 
-        .cancel-btn {
-          background: rgba(255,255,255,0.1);
-          color: white;
-          border: 1px solid rgba(255,255,255,0.2);
-          padding: 10px 20px;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .cancel-btn:hover {
-          background: rgba(255,255,255,0.2);
-        }
-
-        .edit-btn {
-          position: absolute;
-          top: 20px;
-          right: 20px;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.2);
-          color: white;
-          padding: 8px 14px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.2s;
-        }
-
-        .edit-btn:hover {
-          background: rgba(255,255,255,0.2);
-          border-color: white;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+        @media (max-width: 640px) {
+          .ph-title { font-size: 28px; letter-spacing: 2px; }
+          .panel-body { padding: 16px; }
+          .text-content { font-size: 14px; }
         }
       `}</style>
     </Layout>

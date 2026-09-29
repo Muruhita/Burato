@@ -1,22 +1,11 @@
-// pages/admins.js  ← ФРОНТ! Тут только React!
 import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
 
-const DEPARTMENTS_NAMES = {
-  'ib': 'IB',
-  'cid': 'CID',
-  'fa': 'FA',
-  'hrt': 'HRT',
-  'atf': 'ATF',
-  'af': 'AF',
-  'ocu': 'OCU',
-  'dea': 'DEA',
-  'fna': 'FNA',
-  'nsb': 'NSB',
-  'trainee': 'Trainee',
-  'director': 'Director',
-  'cod': 'Chief of Discipline',
-  'assh': 'Ass. Sheriff'
+const DEPT_SHORT = {
+  ib: 'IB', cid: 'CID', fa: 'FA', hrt: 'HRT',
+  atf: 'ATF', af: 'AF', ocu: 'OCU', dea: 'DEA',
+  fna: 'FNA', nsb: 'NSB', trainee: 'TR',
+  director: 'DIRECTOR', cod: 'COD', assh: 'ASS.SHERIFF'
 };
 
 export default function Admins() {
@@ -34,204 +23,292 @@ export default function Admins() {
   }, []);
 
   if (loading) {
-    return (
-      <Layout>
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Загрузка админов...</p>
-        </div>
-      </Layout>
-    );
+    return <Layout><div className="loading-line">ЗАГРУЗКА СОСТАВА...</div></Layout>;
   }
 
   return (
     <Layout>
-      <h1 className="page-title"> Админчики</h1>
+      <div className="info">
+        <header className="page-head">
+          <div className="ph-stamp">COMMAND · OFFICIAL ROSTER</div>
+          <h1 className="ph-title">КОМАНДОВАНИЕ<span className="ph-dot">.</span></h1>
+          <p className="ph-sub">Официальный состав администрации FIB Forms · {admins.length} человек</p>
+          <div className="ph-rule" />
+        </header>
 
-      {admins.length === 0 ? (
-        <p className="empty-text">Список админов пуст.</p>
-      ) : (
-        <div className="admins-grid">
-          {admins.map(admin => {
-            let cardStyle = {
-              background: 'linear-gradient(135deg, #271A3D, #5452AB)',
-              border: '2px solid #6E038F'
-            };
-
-            if (admin.profileCustom) {
-              if (admin.profileCustom.type === 'preset') {
-                const presets = {
-                  default: { background: '#7670FF', border: '1px solid #42186E' },
-                  blue: { background: 'linear-gradient(135deg, #3C5875, #7670FF)', border: '1px solid #42186E' },
-                  purple: { background: 'linear-gradient(135deg, #3C5875, #7670FF)', border: '1px solid #42186E' },
-                  green: { background: 'linear-gradient(135deg, #3C5875, #7670FF)', border: '1px solid #42186E' }
-                };
-                cardStyle = presets[admin.profileCustom.presetId] || cardStyle;
-              } else if (admin.profileCustom.type === 'image' && admin.profileCustom.url) {
-                cardStyle = {
-                  backgroundImage: `url(${admin.profileCustom.url})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  border: '1px solid #fff'
-                };
-              }
-            }
-
-            return (
-              <div key={admin.userId} className="admin-card" style={cardStyle}>
-                <div className="admin-avatar-container">
-                  {admin.avatar ? (
-                    <img
-                      src={`https://cdn.discordapp.com/avatars/${admin.userId}/${admin.avatar}.png`}
-                      alt="Avatar"
-                      className="admin-avatar"
+        {admins.length === 0 ? (
+          <section className="panel">
+            <div className="panel-body center">
+              <div className="empty-icon">//</div>
+              <p className="muted">СПИСОК ПУСТ</p>
+            </div>
+          </section>
+        ) : (
+          <div className="admins">
+            {admins.map((admin, i) => {
+              const hasCustomImage = admin.profileCustom?.type === 'image' && admin.profileCustom?.url;
+              const dept = DEPT_SHORT[admin.department] || admin.department || '—';
+              return (
+                <article
+                  key={admin.userId}
+                  className="admin"
+                  style={{ animationDelay: `${i * 0.03}s` }}
+                >
+                  {hasCustomImage && (
+                    <div
+                      className="admin-bg"
+                      style={{ backgroundImage: `url(${admin.profileCustom.url})` }}
                     />
-                  ) : (
-                    <div className="admin-avatar-placeholder">🛡️</div>
                   )}
-                </div>
 
-                <div className="admin-crown">👑</div>
+                  <div className="admin-crown">◆</div>
 
-                <h3>{admin.nickname}</h3>
-                <p className="admin-username">@{admin.username}</p>
+                  <div className="admin-avatar">
+                    {admin.avatar ? (
+                      <img
+                        src={`https://cdn.discordapp.com/avatars/${admin.userId}/${admin.avatar}.png`}
+                        alt=""
+                      />
+                    ) : (
+                      <div className="admin-avatar-empty">?</div>
+                    )}
+                  </div>
 
-                <div className="admin-info">
-                  <span className="admin-department">
-                     {DEPARTMENTS_NAMES[admin.department] || admin.department}
-                  </span>
-                  <span className="admin-status">Администратор</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  <div className="admin-nick">{admin.nickname}</div>
+                  <div className="admin-user">@{admin.username}</div>
+
+                  <div className="admin-foot">
+                    <span className="a-dept">{dept}</span>
+                    <span className="a-role">ADMIN</span>
+                  </div>
+
+                  <span className="corner corner-tl" />
+                  <span className="corner corner-tr" />
+                  <span className="corner corner-bl" />
+                  <span className="corner corner-br" />
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <style jsx>{`
-        .page-title {
-          font-size: 32px;
-          margin-bottom: 30px;
-          text-align: center;
-          color: #fff;
-          text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        .info { max-width: 1200px; margin: 0 auto; }
+
+        .page-head { margin-bottom: 26px; animation: fadeIn 0.45s ease; }
+        .ph-stamp {
+          display: inline-block;
+          padding: 3px 10px;
+          border: 1px solid #333;
+          color: #888;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          margin-bottom: 14px;
         }
-        .admins-grid {
+        .ph-title {
+          font-size: 42px;
+          font-weight: 900;
+          letter-spacing: 3px;
+          margin: 0;
+          color: #fff;
+          line-height: 1;
+          text-transform: uppercase;
+        }
+        .ph-dot { color: #fff; animation: blink 1.2s steps(2, start) infinite; }
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          50.01%, 100% { opacity: 0.15; }
+        }
+        .ph-sub { color: #888; font-size: 13px; margin: 12px 0 0; }
+        .ph-rule {
+          height: 1px;
+          background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%);
+          margin: 18px 0 0;
+        }
+
+        .admins {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 20px;
-          max-width: 1200px;
-          margin: 0 auto;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 14px;
         }
-        .admin-card {
-          border-radius: 16px;
-          padding: 25px;
+
+        .admin {
+          position: relative;
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+          padding: 26px 20px 0;
           text-align: center;
-          color: #fff;
-          position: relative;
           overflow: hidden;
-          min-height: 240px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+          transition: all 0.22s ease;
+          opacity: 0;
+          animation: cardIn 0.45s ease forwards;
         }
-        .admin-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 15px 40px rgba(59, 130, 246, 0.5);
+        .admin:hover {
+          border-color: #fff;
+          transform: translateY(-4px);
+          box-shadow: 0 14px 40px rgba(0,0,0,0.55), 0 0 0 1px #fff;
         }
-        .admin-avatar-container {
-          margin-bottom: 15px;
-          position: relative;
+
+        .admin-bg {
+          position: absolute;
+          inset: 0;
+          background-size: cover;
+          background-position: center;
+          opacity: 0.14;
+          filter: grayscale(1);
+          pointer-events: none;
+          transition: opacity 0.22s;
         }
-        .admin-avatar {
-          width: 90px;
-          height: 90px;
-          border-radius: 50%;
-          border: 3px solid rgba(255,255,255,0.7);
-          box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
-        }
-        .admin-avatar-placeholder {
-          width: 90px;
-          height: 90px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.15);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 40px;
-          border: 3px solid rgba(255,255,255,0.7);
-        }
+        .admin:hover .admin-bg { opacity: 0.26; }
+
         .admin-crown {
           position: absolute;
-          top: 15px;
-          right: 15px;
-          font-size: 26px;
-          filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
-          animation: crownFloat 3s ease-in-out infinite;
-        }
-        @keyframes crownFloat {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-5px) rotate(-8deg); }
-        }
-        h3 {
-          font-size: 20px;
-          margin-bottom: 5px;
-          text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-        .admin-username {
-          font-size: 13px;
-          color: rgba(255,255,255,0.8);
-          margin-bottom: 12px;
-        }
-        .admin-info {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          margin-top: 10px;
-        }
-        .admin-department {
-          background: rgba(0,0,0,0.4);
-          border: 1px solid rgba(255,255,255,0.3);
-          border-radius: 20px;
-          padding: 5px 12px;
+          top: 14px;
+          right: 16px;
+          color: #fff;
           font-size: 12px;
+          line-height: 1;
+          opacity: 0.7;
+          transition: opacity 0.22s;
         }
-        .admin-status {
-          background: rgba(59, 130, 246, 0.5);
-          border: 1px solid rgba(255,255,255,0.4);
-          border-radius: 20px;
-          padding: 5px 12px;
-          font-size: 12px;
-          font-weight: 600;
+        .admin:hover .admin-crown { opacity: 1; }
+
+        .admin-avatar {
+          position: relative;
+          width: 84px; height: 84px;
+          margin: 0 auto 16px;
+          border: 1px solid #2a2a2a;
+          overflow: hidden;
+          background: #060606;
+          transition: border-color 0.22s;
         }
-        .empty-text {
-          text-align: center;
-          color: #888;
-          font-size: 18px;
-          margin-top: 50px;
+        .admin:hover .admin-avatar { border-color: #fff; }
+        .admin-avatar img {
+          width: 100%; height: 100%;
+          object-fit: cover;
+          display: block;
+          filter: grayscale(0.3);
+          transition: filter 0.22s;
         }
-        .loading-container {
+        .admin:hover .admin-avatar img { filter: grayscale(0); }
+        .admin-avatar-empty {
+          width: 100%; height: 100%;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          min-height: 60vh;
+          color: #333;
+          font-family: ui-monospace, monospace;
+          font-size: 30px;
         }
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid rgba(255,255,255,0.2);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 15px;
+
+        .admin-nick {
+          color: #fff;
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: 0.3px;
+          margin-bottom: 4px;
+          position: relative;
         }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+        .admin-user {
+          color: #888;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 0.5px;
+          margin-bottom: 20px;
+          position: relative;
+        }
+
+        .admin-foot {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          padding: 11px 0;
+          border-top: 1px solid #1a1a1a;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1.6px;
+          position: relative;
+          transition: border-color 0.22s;
+        }
+        .admin:hover .admin-foot { border-top-color: #2a2a2a; }
+        .a-dept {
+          color: #ccc;
+          border: 1px solid #2a2a2a;
+          padding: 2px 8px;
+        }
+        .a-role {
+          color: #000;
+          background: #fff;
+          padding: 2px 8px;
+          font-weight: 800;
+        }
+
+        /* Угловые метки */
+        .corner {
+          position: absolute;
+          width: 8px; height: 8px;
+          border-color: #333;
+          border-style: solid;
+          border-width: 0;
+          pointer-events: none;
+          transition: border-color 0.22s;
+        }
+        .admin:hover .corner { border-color: #fff; }
+        .corner-tl { top: 6px;  left: 6px;  border-top-width: 1px; border-left-width: 1px; }
+        .corner-tr { top: 6px;  right: 6px; border-top-width: 1px; border-right-width: 1px; }
+        .corner-bl { bottom: 6px; left: 6px;  border-bottom-width: 1px; border-left-width: 1px; }
+        .corner-br { bottom: 6px; right: 6px; border-bottom-width: 1px; border-right-width: 1px; }
+
+        .panel {
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+        }
+        .panel-body.center { padding: 60px 20px; text-align: center; }
+        .empty-icon {
+          font-family: ui-monospace, monospace;
+          font-size: 32px;
+          color: #2a2a2a;
+          letter-spacing: 6px;
+          margin-bottom: 12px;
+        }
+        .muted {
+          color: #666;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2.4px;
+          margin: 0;
+          text-transform: uppercase;
+        }
+
+        .loading-line {
+          text-align: center;
+          padding: 60px 20px;
+          color: #666;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2.4px;
+        }
+
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 640px) {
+          .ph-title { font-size: 24px; letter-spacing: 2px; }
+          .admins { grid-template-columns: 1fr 1fr; gap: 10px; }
+          .admin { padding: 20px 12px 0; }
+          .admin-avatar { width: 64px; height: 64px; }
+          .admin-nick { font-size: 13px; }
+          .admin-user { font-size: 10px; }
+          .admin-foot { font-size: 9px; letter-spacing: 1px; gap: 5px; }
+        }
+        @media (max-width: 400px) {
+          .admins { grid-template-columns: 1fr; }
         }
       `}</style>
     </Layout>

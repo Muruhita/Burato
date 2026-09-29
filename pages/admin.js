@@ -1,6 +1,5 @@
 import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
-import { ADMIN_IDS } from '../lib/admins';
 
 export default function AdminPanel() {
   const [bannedUsers, setBannedUsers] = useState([]);
@@ -44,10 +43,9 @@ export default function AdminPanel() {
         })
         .catch(() => {});
     };
-
     fetchAll();
-    const intervalId = setInterval(fetchAll, 10 * 60 * 1000);
-    return () => clearInterval(intervalId);
+    const id = setInterval(fetchAll, 10 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
 
   const handleUnban = async () => {
@@ -63,10 +61,7 @@ export default function AdminPanel() {
   };
 
   const handleBan = async () => {
-    if (!banUserId.trim()) {
-      setBanMsg('⚠️ Введите Discord ID пользователя');
-      return;
-    }
+    if (!banUserId.trim()) { setBanMsg('⚠️ Введите Discord ID'); return; }
     const res = await fetch('/api/admin/ban', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -121,537 +116,756 @@ export default function AdminPanel() {
 
   return (
     <Layout>
-      <div className="admin-container">
-        <h1>Админка</h1>
+      <div className="admin">
+        {/* ░░ ШАПКА ░░ */}
+        <header className="page-head">
+          <div className="ph-stamp">ADMINISTRATIVE ACCESS · LEVEL 5</div>
+          <h1 className="ph-title">ПАНЕЛЬ УПРАВЛЕНИЯ<span className="ph-dot">.</span></h1>
+          <p className="ph-sub">
+            Служебный интерфейс администратора · Все действия фиксируются в логах
+          </p>
+          <div className="ph-rule" />
+        </header>
 
-        {/* 📊 Сервер логов бота */}
-        <div className="section logs-section">
-          <div className="logs-row">
-            <div className="logs-info">
-              <h2>📊 Сервер Логов Бота</h2>
-              <p>Здесь хранятся все логи: заявки, банворды, автобаны, действия админов и ошибки бота.</p>
-            </div>
+        {/* ═══ 01 · СЕРВЕР ЛОГОВ ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">01</span>
+            <h2 className="p-title">СЕРВЕР ЛОГОВ БОТА</h2>
+            <span className="p-tag">EXTERNAL</span>
+          </div>
+          <div className="panel-body panel-split">
+            <p className="p-text">
+              Все события фиксируются в Discord: заявки, банворды, автобаны, действия
+              администраторов и ошибки бота. Доступ к каналу — по приглашению.
+            </p>
             <a
               href="https://discord.gg/ce9x4WpSp"
               target="_blank"
               rel="noopener noreferrer"
-              className="logs-btn"
+              className="btn btn-solid"
             >
-              <span className="logs-btn-icon">💬</span>
-              Присоединиться
+              <span>→</span> ПРИСОЕДИНИТЬСЯ
             </a>
           </div>
-        </div>
+        </section>
 
-        {/* Секция объявления */}
-        <div className="section">
-          <h2>📢 Глобальное уведомление</h2>
-          <textarea
-            value={announcementText}
-            onChange={(e) => setAnnouncementText(e.target.value)}
-            rows="3"
-            placeholder="Введите текст объявления (например, 'Завтра формы закрыты с 12:00 до 14:00')"
-            className="announcement-textarea"
-          />
-          <div className="announcement-actions">
-            <button onClick={saveAnnouncement} className="save-announcement-btn">💾 Сохранить</button>
-            {announcement && (
-              <button onClick={clearAnnouncement} className="clear-announcement-btn">🗑️ Удалить</button>
-            )}
+        {/* ═══ 02 · ОБЪЯВЛЕНИЕ ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">02</span>
+            <h2 className="p-title">ГЛОБАЛЬНОЕ УВЕДОМЛЕНИЕ</h2>
+            <span className={`p-tag ${announcement ? 'p-tag-on' : ''}`}>
+              {announcement ? 'АКТИВНО' : 'ПУСТО'}
+            </span>
           </div>
-          {announcementMsg && <p className="announcement-msg">{announcementMsg}</p>}
-        </div>
-
-        {/* 🧪 TestLik — песочница */}
-        <div className="section testlik-section">
-          <div className="testlik-row">
-            <div className="testlik-info">
-              <h2>🧪 TestLik</h2>
-              <p>Песочница для проверки всех функций FIB Forms в реальном времени.
-              Отправка тестовых заявок в отдельный Discord-канал.</p>
+          <div className="panel-body">
+            <label className="lbl">ТЕКСТ ОБЪЯВЛЕНИЯ</label>
+            <textarea
+              className="field"
+              value={announcementText}
+              onChange={(e) => setAnnouncementText(e.target.value)}
+              rows="3"
+              placeholder="Например: Завтра формы закрыты с 12:00 до 14:00"
+            />
+            <div className="row">
+              <button className="btn" onClick={saveAnnouncement}>
+                💾 СОХРАНИТЬ
+              </button>
+              {announcement && (
+                <button className="btn btn-danger" onClick={clearAnnouncement}>
+                  ✕ УДАЛИТЬ
+                </button>
+              )}
             </div>
+            {announcementMsg && <p className="msg">{announcementMsg}</p>}
+          </div>
+        </section>
+
+        {/* ═══ 03 · TESTLIK ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">03</span>
+            <h2 className="p-title">SANDBOX · TESTLIK</h2>
+            <span className="p-tag">DEV</span>
+          </div>
+          <div className="panel-body panel-split">
+            <p className="p-text">
+              Песочница для проверки всех функций FIB Forms в реальном времени.
+              Заявки уходят в отдельный тестовый Discord-канал.
+            </p>
             <button
-              className="testlik-btn"
+              className="btn btn-solid"
               onClick={() => window.location.href = '/forms/testlik'}
             >
-              🧪 Открыть TestLik →
+              <span>→</span> ОТКРЫТЬ
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* Статистика */}
-        <div className="section">
-          <h2>📊 Статистика заявок</h2>
-          {stats ? (
-            <>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <span className="stat-value">{stats.total}</span>
-                  <span className="stat-label">Всего заявок</span>
+        {/* ═══ 04 · СТАТИСТИКА ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">04</span>
+            <h2 className="p-title">СТАТИСТИКА ЗАЯВОК</h2>
+            <span className="p-tag">LIVE</span>
+          </div>
+          <div className="panel-body">
+            {stats ? (
+              <>
+                <div className="stats-grid">
+                  {[
+                    ['ВСЕГО', stats.total],
+                    ['СЕГОДНЯ', stats.today],
+                    ['ЗА НЕДЕЛЮ', stats.thisWeek],
+                    ['ЗА МЕСЯЦ', stats.thisMonth],
+                    ['ЮЗЕРОВ', stats.activeUsers],
+                  ].map(([label, value]) => (
+                    <div key={label} className="stat">
+                      <div className="stat-val">{value}</div>
+                      <div className="stat-lbl">{label}</div>
+                    </div>
+                  ))}
                 </div>
-                <div className="stat-card">
-                  <span className="stat-value">{stats.today}</span>
-                  <span className="stat-label">Сегодня</span>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-value">{stats.thisWeek}</span>
-                  <span className="stat-label">За неделю</span>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-value">{stats.thisMonth}</span>
-                  <span className="stat-label">За месяц</span>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-value">{stats.activeUsers}</span>
-                  <span className="stat-label">Активных юзеров</span>
-                </div>
-              </div>
-              {stats.types && Object.keys(stats.types).length > 0 && (
-                <div className="types-stats">
-                  <h3>По типам форм:</h3>
-                  <ul>
-                    {Object.entries(stats.types).map(([type, count]) => (
-                      <li key={type}>{type}: <strong>{count}</strong></li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          ) : (
-            <p>Загрузка статистики...</p>
-          )}
-        </div>
 
-        {/* Глобальное управление заявками */}
-        <div className="section">
-          <h2>Управление заявками</h2>
-          <button onClick={toggleForms} className={formsActive ? 'stop-btn' : 'start-btn'}>
-            {formsActive ? '🚫 Остановить ВСЕ заявки' : '✅ Возобновить ВСЕ заявки'}
-          </button>
-          <p className="status-text">
-            Текущий статус: {formsActive ? '🟢 Заявки открыты' : '🔴 Заявки остановлены'}
-          </p>
-        </div>
-
-        {/* Блокировка пользователя */}
-        <div className="section">
-          <h2>🚫 Заблокировать пользователя</h2>
-          <input
-            type="text"
-            value={banUserId}
-            onChange={(e) => setBanUserId(e.target.value)}
-            placeholder="Discord ID пользователя"
-          />
-          <input
-            type="text"
-            value={banReason}
-            onChange={(e) => setBanReason(e.target.value)}
-            placeholder="Причина (необязательно)"
-            style={{ marginTop: '8px' }}
-          />
-
-          <label className="permanent-checkbox">
-            <input
-              type="checkbox"
-              checked={banPermanent}
-              onChange={(e) => setBanPermanent(e.target.checked)}
-            />
-            <span>🔒 Забанить навсегда (без срока)</span>
-          </label>
-
-          <button onClick={handleBan} className="ban-btn">
-            {banPermanent ? '🔒 Забанить навсегда' : 'Заблокировать (7 дней)'}
-          </button>
-          {banMsg && <p className="status-msg">{banMsg}</p>}
-        </div>
-
-        {/* Разблокировка пользователя */}
-        <div className="section">
-          <h2>🔓 Разблокировать пользователя</h2>
-          <input type="text" value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="Discord ID" />
-          <button onClick={handleUnban}>Снять блокировку</button>
-          {status && <p className="status-msg">{status}</p>}
-        </div>
-
-        {/* Список заблокированных */}
-        <div className="section">
-          <h2>📋 Список заблокированных</h2>
-          <div className="banned-list">
-            {bannedUsers.length === 0 ? (
-              <p>Нет заблокированных пользователей.</p>
-            ) : (
-              bannedUsers.map(user => (
-                <div key={user.userId} className="banned-item">
-                  <div className="banned-item-left">
-                    <span className="banned-id">
-                      ID: {user.userId}
-                      {user.username ? ` (${user.username})` : ''}
-                    </span>
-                    {user.permanent && <span className="permanent-badge">🔒 Навсегда</span>}
+                {stats.types && Object.keys(stats.types).length > 0 && (
+                  <div className="types">
+                    <div className="types-head">ПО ТИПАМ ФОРМ</div>
+                    <div className="types-rows">
+                      {Object.entries(stats.types).map(([type, count]) => (
+                        <div key={type} className="type-row">
+                          <span className="type-name">{type}</span>
+                          <span className="type-dots" />
+                          <span className="type-count">{count}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <span className="banned-reason">Причина: {user.reason}</span>
-                </div>
-              ))
+                )}
+              </>
+            ) : (
+              <p className="muted">ЗАГРУЗКА ДАННЫХ...</p>
             )}
           </div>
-        </div>
+        </section>
+
+        {/* ═══ 05 · УПРАВЛЕНИЕ ФОРМАМИ ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">05</span>
+            <h2 className="p-title">УПРАВЛЕНИЕ ЗАЯВКАМИ</h2>
+            <span className={`p-tag ${formsActive ? 'p-tag-on' : 'p-tag-off'}`}>
+              {formsActive ? 'OPEN' : 'CLOSED'}
+            </span>
+          </div>
+          <div className="panel-body">
+            <div className="state-row">
+              <span className="state-label">ТЕКУЩИЙ СТАТУС:</span>
+              <span className={`state-value ${formsActive ? 'sv-on' : 'sv-off'}`}>
+                {formsActive ? '🟢 ЗАЯВКИ ОТКРЫТЫ' : '🔴 ЗАЯВКИ ОСТАНОВЛЕНЫ'}
+              </span>
+            </div>
+            <button
+              className={`btn btn-wide ${formsActive ? 'btn-danger' : 'btn-success'}`}
+              onClick={toggleForms}
+            >
+              {formsActive ? '✕ ОСТАНОВИТЬ ВСЕ ЗАЯВКИ' : '✓ ВОЗОБНОВИТЬ ВСЕ ЗАЯВКИ'}
+            </button>
+          </div>
+        </section>
+
+        {/* ═══ 06 · БЛОКИРОВКА ═══ */}
+        <section className="panel panel-danger">
+          <div className="panel-head">
+            <span className="p-num">06</span>
+            <h2 className="p-title">ЗАБЛОКИРОВАТЬ ПОЛЬЗОВАТЕЛЯ</h2>
+            <span className="p-tag p-tag-danger">RESTRICT</span>
+          </div>
+          <div className="panel-body">
+            <label className="lbl">DISCORD ID</label>
+            <input
+              className="field"
+              type="text"
+              value={banUserId}
+              onChange={(e) => setBanUserId(e.target.value)}
+              placeholder="Например: 123456789012345678"
+            />
+
+            <label className="lbl">ПРИЧИНА (НЕОБЯЗАТЕЛЬНО)</label>
+            <input
+              className="field"
+              type="text"
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              placeholder="Например: нарушение правил"
+            />
+
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={banPermanent}
+                onChange={(e) => setBanPermanent(e.target.checked)}
+              />
+              <span className="check-box" />
+              <span className="check-text">🔒 ЗАБАНИТЬ НАВСЕГДА (БЕЗ СРОКА)</span>
+            </label>
+
+            <button className="btn btn-danger btn-wide" onClick={handleBan}>
+              {banPermanent ? '🔒 ЗАБАНИТЬ НАВСЕГДА' : '⏱ ЗАБЛОКИРОВАТЬ · 7 ДНЕЙ'}
+            </button>
+            {banMsg && <p className="msg">{banMsg}</p>}
+          </div>
+        </section>
+
+        {/* ═══ 07 · РАЗБЛОКИРОВКА ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">07</span>
+            <h2 className="p-title">РАЗБЛОКИРОВАТЬ ПОЛЬЗОВАТЕЛЯ</h2>
+            <span className="p-tag">UNLOCK</span>
+          </div>
+          <div className="panel-body">
+            <label className="lbl">DISCORD ID</label>
+            <input
+              className="field"
+              type="text"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="ID ранее заблокированного пользователя"
+            />
+            <button className="btn btn-solid btn-wide" onClick={handleUnban}>
+              ✓ СНЯТЬ БЛОКИРОВКУ
+            </button>
+            {status && <p className="msg">{status}</p>}
+          </div>
+        </section>
+
+        {/* ═══ 08 · СПИСОК ЗАБЛОКИРОВАННЫХ ═══ */}
+        <section className="panel">
+          <div className="panel-head">
+            <span className="p-num">08</span>
+            <h2 className="p-title">РЕЕСТР ЗАБЛОКИРОВАННЫХ</h2>
+            <span className="p-tag">{bannedUsers.length} ЗАПИСЕЙ</span>
+          </div>
+          <div className="panel-body">
+            {bannedUsers.length === 0 ? (
+              <p className="muted">РЕЕСТР ПУСТ</p>
+            ) : (
+              <div className="banned-list">
+                {bannedUsers.map(user => (
+                  <div key={user.userId} className="banned-item">
+                    <div className="bi-id">
+                      <span className="bi-label">ID</span>
+                      <span className="bi-value">{user.userId}</span>
+                      {user.username && (
+                        <span className="bi-user">// {user.username}</span>
+                      )}
+                    </div>
+                    <div className="bi-right">
+                      {user.permanent && (
+                        <span className="bi-badge">🔒 НАВСЕГДА</span>
+                      )}
+                      <span className="bi-reason">
+                        {user.reason || '—'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
       <style jsx>{`
-        .admin-container {
-          max-width: 900px;
+        .admin {
+          max-width: 980px;
           margin: 0 auto;
-        }
-        .section {
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
-          padding: 25px;
-          border-radius: 15px;
-          margin-bottom: 25px;
-        }
-        .section h2 {
-          margin-bottom: 15px;
-          font-size: 20px;
-          color: #fff;
+          color: #eaeaea;
+          padding-bottom: 20px;
         }
 
-        /* 📊 Сервер логов */
-        .logs-section {
-          background: linear-gradient(135deg, rgba(88, 101, 242, 0.15), rgba(114, 137, 218, 0.08));
-          border: 1px solid rgba(88, 101, 242, 0.5);
-          box-shadow: 0 8px 30px rgba(88, 101, 242, 0.2);
+        /* ═══ ШАПКА ═══ */
+        .page-head {
+          margin-bottom: 30px;
+          animation: fadeIn 0.5s ease;
+        }
+        .ph-stamp {
+          display: inline-block;
+          padding: 3px 10px;
+          border: 1px solid #333;
+          color: #888;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          margin-bottom: 14px;
+          background: rgba(255,255,255,0.02);
+        }
+        .ph-title {
+          font-size: 42px;
+          font-weight: 900;
+          letter-spacing: 3px;
+          margin: 0;
+          color: #fff;
+          line-height: 1;
+          text-transform: uppercase;
+        }
+        .ph-dot {
+          color: #fff;
+          animation: blink 1.2s steps(2, start) infinite;
+        }
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          50.01%, 100% { opacity: 0.15; }
+        }
+        .ph-sub {
+          color: #888;
+          font-size: 13px;
+          margin: 12px 0 0;
+          letter-spacing: 0.3px;
+        }
+        .ph-rule {
+          height: 1px;
+          background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%);
+          margin: 20px 0 0;
+        }
+
+        /* ═══ ПАНЕЛЬ ═══ */
+        .panel {
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+          margin-bottom: 16px;
+          animation: cardIn 0.45s ease both;
           position: relative;
-          overflow: hidden;
         }
-        .logs-section::before {
-          content: '';
-          position: absolute;
-          top: -50px;
-          right: -50px;
-          width: 180px;
-          height: 180px;
-          background: radial-gradient(circle, rgba(88, 101, 242, 0.4), transparent 70%);
-          filter: blur(40px);
-          pointer-events: none;
+        .panel-danger {
+          border-color: #3a1f1f;
         }
-        .logs-row {
+        .panel-head {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 12px 18px;
+          border-bottom: 1px solid #1f1f1f;
+          background: #0a0a0a;
+        }
+        .panel-danger .panel-head {
+          border-bottom-color: #3a1f1f;
+        }
+        .p-num {
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          color: #666;
+          font-weight: 700;
+        }
+        .p-title {
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 2.4px;
+          color: #fff;
+          margin: 0;
+          text-transform: uppercase;
+          flex: 1;
+        }
+        .p-tag {
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: #666;
+          border: 1px solid #2a2a2a;
+          padding: 2px 8px;
+          text-transform: uppercase;
+        }
+        .p-tag-on {
+          color: #000;
+          background: #fff;
+          border-color: #fff;
+        }
+        .p-tag-off,
+        .p-tag-danger {
+          color: #ff8080;
+          border-color: #553030;
+        }
+        .p-tag-off {
+          color: #888;
+          border-color: #2a2a2a;
+        }
+
+        .panel-body {
+          padding: 18px;
+        }
+        .panel-split {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 20px;
           flex-wrap: wrap;
-          position: relative;
-          z-index: 1;
         }
-        .logs-info {
-          flex: 1;
-          min-width: 240px;
-        }
-        .logs-info h2 {
-          margin-bottom: 8px;
-          color: #fff;
-          font-size: 20px;
-        }
-        .logs-info p {
-          color: #b0b8e8;
-          font-size: 13px;
-          line-height: 1.5;
+        .p-text {
+          color: #b0b0b0;
+          font-size: 13.5px;
+          line-height: 1.6;
           margin: 0;
+          flex: 1;
+          min-width: 220px;
         }
-        .logs-btn {
+        .muted {
+          color: #666;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          margin: 0;
+          text-transform: uppercase;
+        }
+
+        /* ═══ ПОЛЯ ═══ */
+        .lbl {
+          display: block;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #666;
+          text-transform: uppercase;
+          margin-bottom: 7px;
+        }
+        .field {
+          width: 100%;
+          padding: 11px 14px;
+          background: #060606;
+          border: 1px solid #262626;
+          color: #fff;
+          border-radius: 0;
+          font-size: 13.5px;
+          margin-bottom: 16px;
+          font-family: ui-monospace, monospace;
+          box-sizing: border-box;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .field:focus {
+          border-color: #fff;
+        }
+        .field::placeholder {
+          color: #444;
+          font-family: -apple-system, sans-serif;
+        }
+        textarea.field {
+          resize: vertical;
+          min-height: 70px;
+          font-family: inherit;
+        }
+
+        /* ═══ ЧЕКБОКС ═══ */
+        .check {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 4px 0 16px;
+          cursor: pointer;
+          user-select: none;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1.4px;
+          color: #ccc;
+        }
+        .check input {
+          display: none;
+        }
+        .check-box {
+          width: 16px; height: 16px;
+          border: 1px solid #444;
+          background: #060606;
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          padding: 14px 26px;
-          background: linear-gradient(135deg, #5865F2, #7289DA);
-          color: #fff;
-          border: none;
-          border-radius: 12px;
-          cursor: pointer;
-          font-weight: 800;
-          font-size: 14px;
-          letter-spacing: 0.5px;
-          text-decoration: none;
-          transition: all 0.3s;
-          white-space: nowrap;
-          box-shadow: 0 6px 22px rgba(88, 101, 242, 0.5);
-        }
-        .logs-btn:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 12px 34px rgba(88, 101, 242, 0.7);
-        }
-        .logs-btn:active {
-          transform: translateY(-1px);
-        }
-        .logs-btn-icon {
-          font-size: 18px;
-        }
-
-        /* 🧪 TestLik секция */
-        .testlik-section {
-          background: linear-gradient(135deg, rgba(88, 101, 242, 0.12), rgba(0, 229, 255, 0.08));
-          border: 1px solid rgba(88, 101, 242, 0.4);
-          box-shadow: 0 8px 30px rgba(88, 101, 242, 0.15);
+          justify-content: center;
+          transition: all 0.18s;
+          flex-shrink: 0;
           position: relative;
-          overflow: hidden;
         }
-        .testlik-section::before {
+        .check-box::after {
           content: '';
-          position: absolute;
-          top: -50px;
-          right: -50px;
-          width: 180px;
-          height: 180px;
-          background: radial-gradient(circle, rgba(0, 229, 255, 0.25), transparent 70%);
-          filter: blur(40px);
-          pointer-events: none;
+          width: 8px; height: 8px;
+          background: #fff;
+          transform: scale(0);
+          transition: transform 0.15s;
         }
-        .testlik-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-          flex-wrap: wrap;
-          position: relative;
-          z-index: 1;
+        .check input:checked + .check-box {
+          border-color: #fff;
         }
-        .testlik-info {
-          flex: 1;
-          min-width: 240px;
+        .check input:checked + .check-box::after {
+          transform: scale(1);
         }
-        .testlik-info h2 {
-          margin-bottom: 8px;
-          color: #fff;
-          font-size: 20px;
-        }
-        .testlik-info p {
-          color: #8898c8;
-          font-size: 13px;
-          line-height: 1.5;
-          margin: 0;
-        }
-        .testlik-btn {
-          padding: 14px 26px;
-          background: linear-gradient(135deg, #5865F2, #00E5FF);
-          color: #fff;
-          border: none;
-          border-radius: 12px;
-          cursor: pointer;
-          font-weight: 800;
-          font-size: 14px;
-          letter-spacing: 0.5px;
-          transition: all 0.3s;
-          font-family: inherit;
-          margin: 0;
-          white-space: nowrap;
-          box-shadow: 0 6px 22px rgba(88, 101, 242, 0.45);
-        }
-        .testlik-btn:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 12px 34px rgba(0, 229, 255, 0.6);
-        }
-        .testlik-btn:active {
-          transform: translateY(-1px);
+        .check-text {
+          color: #eaeaea;
         }
 
-        .announcement-textarea {
-          width: 100%;
-          background: rgba(0,0,0,0.3);
-          border: 1px solid rgba(255,255,255,0.2);
-          border-radius: 8px;
-          color: white;
-          padding: 12px;
-          font-size: 16px;
-          resize: vertical;
-        }
-        .announcement-actions {
-          margin-top: 10px;
+        /* ═══ КНОПКИ ═══ */
+        .row {
           display: flex;
           gap: 10px;
+          flex-wrap: wrap;
         }
-        .save-announcement-btn {
-          background: #5865F2;
-          color: white;
-          border: none;
-          padding: 10px 15px;
-          border-radius: 8px;
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 11px 18px;
+          background: transparent;
+          border: 1px solid #333;
+          color: #eaeaea;
           cursor: pointer;
-          font-weight: bold;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+          text-decoration: none;
         }
-        .clear-announcement-btn {
-          background: #f44336;
-          color: white;
-          border: none;
-          padding: 10px 15px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: bold;
+        .btn:hover {
+          background: #fff;
+          border-color: #fff;
+          color: #000;
         }
-        .announcement-msg {
-          margin-top: 10px;
-          color: #4CAF50;
+        .btn-solid {
+          background: #fff;
+          border-color: #fff;
+          color: #000;
+          font-weight: 700;
+        }
+        .btn-solid:hover {
+          background: #ccc;
+          border-color: #ccc;
+        }
+        .btn-danger {
+          border-color: #553030;
+          color: #ff8080;
+        }
+        .btn-danger:hover {
+          background: #ff4444;
+          border-color: #ff4444;
+          color: #fff;
+        }
+        .btn-success {
+          border-color: #2a5a2a;
+          color: #8ee08e;
+        }
+        .btn-success:hover {
+          background: #4caf50;
+          border-color: #4caf50;
+          color: #fff;
+        }
+        .btn-wide {
+          width: 100%;
+        }
+        .btn > span:first-child {
+          font-size: 12px;
+          line-height: 1;
         }
 
+        .msg {
+          margin-top: 12px;
+          color: #4caf50;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1px;
+        }
+
+        /* ═══ СТАТИСТИКА ═══ */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 15px;
+          gap: 12px;
           margin-bottom: 20px;
         }
-        .stat-card {
-          background: rgba(0,0,0,0.3);
-          border: 1px solid rgba(255,255,255,0.15);
-          border-radius: 10px;
-          padding: 15px;
+        .stat {
+          background: #060606;
+          border: 1px solid #1f1f1f;
+          padding: 16px 12px;
           text-align: center;
         }
-        .stat-value {
-          display: block;
-          font-size: 32px;
-          font-weight: bold;
-          color: #5865F2;
+        .stat-val {
+          font-size: 28px;
+          font-weight: 900;
+          color: #fff;
+          font-family: ui-monospace, monospace;
+          line-height: 1;
         }
-        .stat-label {
-          color: #aaa;
-          font-size: 14px;
-        }
-        .types-stats { margin-top: 15px; }
-        .types-stats h3 {
-          color: #ccc;
-          font-size: 16px;
-          margin-bottom: 10px;
-        }
-        .types-stats ul {
-          list-style: none;
-          padding: 0;
-        }
-        .types-stats li {
-          background: rgba(255,255,255,0.05);
-          padding: 8px;
-          border-radius: 8px;
-          margin-bottom: 5px;
-          color: #ccc;
-        }
-        .types-stats li strong { color: #fff; }
-
-        input[type="text"] {
-          width: 100%;
-          padding: 12px;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.2);
-          color: white;
-          border-radius: 8px;
-          margin-bottom: 10px;
-          box-sizing: border-box;
+        .stat-lbl {
+          color: #666;
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          margin-top: 8px;
+          text-transform: uppercase;
         }
 
-        .permanent-checkbox {
+        .types {
+          border-top: 1px dashed #1f1f1f;
+          padding-top: 16px;
+        }
+        .types-head {
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #666;
+          text-transform: uppercase;
+          margin-bottom: 12px;
+        }
+        .types-rows {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .type-row {
           display: flex;
           align-items: center;
           gap: 10px;
-          color: #ff8080;
-          font-size: 14px;
-          font-weight: 600;
-          margin: 8px 0 14px;
-          cursor: pointer;
-          user-select: none;
+          font-family: ui-monospace, monospace;
+          font-size: 12px;
         }
-        .permanent-checkbox input[type="checkbox"] {
-          width: 18px;
-          height: 18px;
-          cursor: pointer;
-          accent-color: #ff4444;
-          margin: 0;
+        .type-name {
+          color: #ccc;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          font-size: 11px;
+        }
+        .type-dots {
+          flex: 1;
+          height: 1px;
+          background: repeating-linear-gradient(
+            90deg,
+            #2a2a2a 0px, #2a2a2a 3px,
+            transparent 3px, transparent 6px
+          );
+        }
+        .type-count {
+          color: #fff;
+          font-weight: 700;
+          font-size: 13px;
         }
 
-        button {
-          padding: 12px 20px;
-          border-radius: 8px;
-          border: none;
-          cursor: pointer;
-          font-weight: bold;
-          transition: all 0.3s;
-          margin-right: 10px;
+        /* ═══ СТАТУС ФОРМ ═══ */
+        .state-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1.6px;
         }
-        .ban-btn {
-          background: #f44336;
-          color: white;
+        .state-label {
+          color: #666;
         }
-        .ban-btn:hover { background: #d32f2f; }
-        .stop-btn {
-          background: #ff4444;
-          color: white;
+        .state-value {
+          padding: 5px 12px;
+          border: 1px solid #2a2a2a;
         }
-        .start-btn {
-          background: #4CAF50;
-          color: white;
+        .sv-on {
+          color: #8ee08e;
+          border-color: #2a5a2a;
         }
-        .status-text {
-          margin-top: 10px;
-          color: #aaa;
+        .sv-off {
+          color: #ff8080;
+          border-color: #553030;
         }
-        .status-msg {
-          margin-top: 10px;
-          color: #4CAF50;
-        }
+
+        /* ═══ РЕЕСТР БАНА ═══ */
         .banned-list {
-          max-height: 300px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 420px;
           overflow-y: auto;
+          padding-right: 4px;
         }
         .banned-item {
-          background: rgba(255,255,255,0.05);
-          padding: 10px;
-          border-radius: 8px;
-          margin-bottom: 10px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 15px;
-          font-size: 14px;
-          color: #ccc;
+          gap: 14px;
+          padding: 12px 14px;
+          background: #060606;
+          border: 1px solid #1a1a1a;
           flex-wrap: wrap;
         }
-        .banned-item-left {
+        .bi-id {
           display: flex;
           align-items: center;
           gap: 10px;
           flex-wrap: wrap;
-        }
-        .banned-id { color: #ccc; }
-        .permanent-badge {
-          background: rgba(255, 60, 60, 0.2);
-          border: 1px solid #ff4444;
-          color: #ff8080;
-          padding: 2px 8px;
-          border-radius: 12px;
+          font-family: ui-monospace, monospace;
           font-size: 12px;
-          font-weight: 600;
         }
-        .banned-reason {
-          color: #aaa;
-          font-size: 13px;
-          text-align: right;
+        .bi-label {
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: #555;
+        }
+        .bi-value {
+          color: #fff;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+        }
+        .bi-user {
+          color: #666;
+          font-size: 11px;
+        }
+        .bi-right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
           flex: 1;
-          min-width: 200px;
+          min-width: 180px;
+        }
+        .bi-badge {
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 1.6px;
+          color: #ff8080;
+          border: 1px solid #553030;
+          padding: 3px 8px;
+          text-transform: uppercase;
+        }
+        .bi-reason {
+          color: #b0b0b0;
+          font-size: 12.5px;
+          text-align: right;
+          max-width: 320px;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        @media (max-width: 600px) {
-          .logs-row {
-            flex-direction: column;
-            text-align: center;
-          }
-          .logs-btn {
-            width: 100%;
-            justify-content: center;
-          }
-          .testlik-row {
-            flex-direction: column;
-            text-align: center;
-          }
-          .testlik-btn {
-            width: 100%;
-            justify-content: center;
-          }
+        /* ═══ АНИМАЦИИ ═══ */
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        /* ═══ МОБИЛЬНАЯ ═══ */
+        @media (max-width: 640px) {
+          .ph-title { font-size: 26px; letter-spacing: 2px; }
+          .ph-sub { font-size: 12px; }
+          .panel-head { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+          .p-title { font-size: 11.5px; letter-spacing: 1.8px; }
+          .panel-body { padding: 14px; }
+          .panel-split { flex-direction: column; align-items: flex-start; }
+          .stats-grid { grid-template-columns: repeat(2, 1fr); }
+          .btn { padding: 10px 14px; font-size: 10px; }
+          .banned-item { flex-direction: column; align-items: flex-start; }
+          .bi-right { justify-content: flex-start; }
+          .bi-reason { text-align: left; }
         }
       `}</style>
     </Layout>

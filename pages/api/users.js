@@ -1,6 +1,6 @@
 import redis from '../../lib/redis';
 import { verifyToken } from '../../lib/discord';
-import { isBlacklisted } from '../../lib/antispam';
+import { isBlacklisted } from '../../lib/blacklist';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
