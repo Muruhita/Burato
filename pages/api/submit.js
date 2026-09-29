@@ -202,7 +202,7 @@ export default async function handler(req, res) {
     const foundWord = findBadWord(allText);
     const badWord = foundWord || foundWords.join(', ');
 
-    await addToBlacklist(user.id, username, `Банворд: ${badWord}`);
+    await addToBlacklist(user.id, username, `Банворд: ${badWord}`, false, 'banword');
 
     // 📢 Лог банворда
     await logBanword({
