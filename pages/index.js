@@ -167,18 +167,20 @@ export default function Home() {
           padding: 20px;
         }
 
-        .auth-card {
-          position: relative;
-          z-index: 10;
-          width: 100%;
-          max-width: 440px;
-          background: #0c0c0c;
-          border: 1px solid #1f1f1f;
-          padding: 0 0 30px;
-          opacity: 0;
-          transform: translateY(20px);
-          transition: opacity 0.7s ease, transform 0.7s ease;
-          box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+      .auth-card {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 440px;
+        background: rgba(12, 12, 12, 0.55);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0 0 30px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.7s ease, transform 0.7s ease;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.6);
         }
         .auth-card.show {
           opacity: 1;
@@ -192,7 +194,7 @@ export default function Home() {
           justify-content: center;
           gap: 10px;
           padding: 8px 14px;
-          background: #000;
+          background: rgba(0, 0, 0, 0.5);
           border-bottom: 1px solid #1f1f1f;
           font-family: ui-monospace, monospace;
           font-size: 10px;
