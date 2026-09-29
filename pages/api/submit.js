@@ -62,12 +62,29 @@ const EMBED_IMAGE_HOSTS = [
   'https://cdn.discordapp.com/'
 ];
 
-async function sendToDiscord(webhookUrl, data, retries = 3) {
-  const safeWebhook = webhookUrl.replace('discord.com', 'discordapp.com');
+// ─────────────────────────────────────────────────────────────
+// 🧵 Форум отпусков — вебхук + ID веток
+// ─────────────────────────────────────────────────────────────
+const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1554629063606403163/TBJAaaXvcN5n4Mjg7tnn7-zy-C1-lp0TV5uoMi199A5o8f9YLdq3-6rg5WQioH3sYUK5';
+
+const LEAVE_THREADS = {
+  IC:  '1554628745430695976',
+  OOC: '1554628906697498695'
+};
+
+// ─────────────────────────────────────────────────────────────
+// 📡 Отправка в Discord с поддержкой форумных веток
+// ─────────────────────────────────────────────────────────────
+async function sendToDiscord(webhookUrl, data, threadId = null, retries = 3) {
+  let url = webhookUrl.replace('discord.com', 'discordapp.com');
+  if (threadId) {
+    url += `?thread_id=${threadId}`;
+  }
+
   let lastError = null;
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(safeWebhook, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -152,7 +169,7 @@ export default async function handler(req, res) {
   const spamCheck = await checkSpam(user.id, user.username);
   if (spamCheck.isSpam) return res.status(429).json({ error: spamCheck.message });
 
-  const { type, department, targetDepartment, ...rawFormData } = req.body;
+  const { type, department, targetDepartment, leaveType, ...rawFormData } = req.body;
   const formData = sanitizeObject(rawFormData, 1000);
   const userId = user.id;
   const username = user.username;
@@ -204,7 +221,6 @@ export default async function handler(req, res) {
 
     await addToBlacklist(user.id, username, `Банворд: ${badWord}`, false, 'banword');
 
-    // 📢 Лог банворда
     await logBanword({
       userId,
       username,
@@ -225,6 +241,7 @@ export default async function handler(req, res) {
 
   let webhookUrl;
   let roleMentions = '';
+  let leaveThreadId = null;
 
   if (type === 'testlik') {
     webhookUrl = webhooks.testlik;
@@ -255,8 +272,8 @@ export default async function handler(req, res) {
     if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для спец вооружения не настроен' });
     roleMentions = '<@&1385513451077636136>';
   } else if (type === 'leave') {
-    webhookUrl = webhooks.leave;
-    if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для отпуска не настроен' });
+    webhookUrl = FORUM_LEAVE_WEBHOOK;
+    leaveThreadId = LEAVE_THREADS[leaveType] || LEAVE_THREADS.IC;
     roleMentions = '<@&1274110499356934211>';
   } else if (type === 'promotion') {
     webhookUrl = webhooks.promotion;
@@ -306,14 +323,17 @@ export default async function handler(req, res) {
     embed.image = { url: formData.screenshot };
   }
 
-  const result = await sendToDiscord(webhookUrl, {
-    content: roleMentions.trim() || undefined,
-    embeds: [embed],
-    username: 'FIB Forms',
-    avatar_url: 'https://i.ytimg.com/vi/m5yUwUSBxsg/maxresdefault.jpg'
-  });
+  const result = await sendToDiscord(
+    webhookUrl,
+    {
+      content: roleMentions.trim() || undefined,
+      embeds: [embed],
+      username: 'FIB Forms',
+      avatar_url: 'https://i.ytimg.com/vi/m5yUwUSBxsg/maxresdefault.jpg'
+    },
+    leaveThreadId
+  );
 
-  // 📢 Лог отправки заявки
   logSubmission({
     type,
     username,
@@ -343,7 +363,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ success: true });
   } else {
-    // 📢 Лог ошибки
     logError({
       scope: 'submit:discord',
       message: result.error || 'Failed to send to Discord',
@@ -549,7 +568,13 @@ function buildFields(type, department, targetDepartment, data, userId, username)
       { name: '📅 Конец', value: data.endDate || 'Не указано', inline: false }
     ];
 
-    if (data.screenshot && !data.screenshot.startsWith('https://i.ibb.co/')) {
+    if (Array.isArray(data.screenshots) && data.screenshots.length) {
+      fields.push({
+        name: `📸 Скриншоты (${data.screenshots.length})`,
+        value: data.screenshots.join('\n'),
+        inline: false
+      });
+    } else if (data.screenshot && !data.screenshot.startsWith('https://i.ibb.co/')) {
       fields.push({ name: '🖼️ Скриншот', value: data.screenshot, inline: false });
     }
 
