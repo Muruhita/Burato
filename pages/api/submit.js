@@ -73,6 +73,22 @@ const LEAVE_THREADS = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// 🏢 Роли отделов для формы Leave
+// ─────────────────────────────────────────────────────────────
+const LEAVE_ROLES = {
+  IB:  ['1520684340483461211', '1520681660650225755', '1520680899799289876', '1398200840900055071'],
+  CID: ['1520684359684718713', '1520681666241237002', '1520680908229840978', '1398200760843374652'],
+  FA:  ['1520684374243147908', '1520681669173186631', '1520680932062007326', '1398200891353468928'],
+  HRT: ['1520684348955689121', '1520681663460544633', '1520680902533845053', '1398201557635567636'],
+  ATF: ['1520684344086237215', '1520681675774890004', '1520680905671184436', '1398201048598057041'],
+  AF:  ['1520684363497603192', '1520681681366028361', '1520680937900474408', '1398200952602755103'],
+  OCU: ['1520684354286784622', '1520681678706704394', '1520680921928437810', '1418771091291115631'],
+  DEA: ['1520684367188328468', '1520681684603895880', '1520680926278058125', '1398201115379761283'],
+  FNA: ['1520684351560487093', '1520681672499003533', '1520680960134221944', '1385530645186613311'],
+  NSB: ['1520684346531512422', '1520681687728525342', '1520680911539273799', '1398201167154122752'],
+};
+
+// ─────────────────────────────────────────────────────────────
 // 📡 Отправка в Discord с поддержкой форумных веток
 // ─────────────────────────────────────────────────────────────
 async function sendToDiscord(webhookUrl, data, threadId = null, retries = 3) {
@@ -171,6 +187,9 @@ export default async function handler(req, res) {
 
   const { type, department, targetDepartment, leaveType, ...rawFormData } = req.body;
   const formData = sanitizeObject(rawFormData, 1000);
+  // Возвращаем leaveType — нужен в buildFields
+  if (leaveType) formData.leaveType = leaveType;
+
   const userId = user.id;
   const username = user.username;
 
@@ -274,7 +293,14 @@ export default async function handler(req, res) {
   } else if (type === 'leave') {
     webhookUrl = FORUM_LEAVE_WEBHOOK;
     leaveThreadId = LEAVE_THREADS[leaveType] || LEAVE_THREADS.IC;
+
+    const deptKey = String(department || '').toUpperCase();
+    const deptRoles = LEAVE_ROLES[deptKey] || [];
+
     roleMentions = '<@&1274110499356934211>';
+    if (deptRoles.length) {
+      roleMentions += ' ' + deptRoles.map(id => `<@&${id}>`).join(' ');
+    }
   } else if (type === 'promotion') {
     webhookUrl = webhooks.promotion;
     if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для повышения не настроен' });
@@ -562,7 +588,7 @@ function buildFields(type, department, targetDepartment, data, userId, username)
     const fields = [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       { name: '📋 Тип отпуска', value: data.leaveType === 'OOC' ? 'OOC Отпуск' : 'IC Отпуск', inline: false },
-      { name: '🏢 Отдел', value: data.department || 'Не указан', inline: false },
+      { name: '🏢 Отдел', value: department || 'Не указан', inline: false },
       { name: '📝 Причина', value: data.reason || 'Не указана', inline: false },
       { name: '📅 Начало', value: data.startDate || 'Не указано', inline: false },
       { name: '📅 Конец', value: data.endDate || 'Не указано', inline: false }
