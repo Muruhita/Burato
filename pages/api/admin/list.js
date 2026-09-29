@@ -1,4 +1,5 @@
-import { getAllBannedUsers, isFormSubmissionActive } from '../../../lib/antispam';
+import { getAllBannedUsers } from '../../../lib/blacklist';
+import { isFormSubmissionActive } from '../../../lib/antispam';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
 
