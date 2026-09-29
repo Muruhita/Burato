@@ -1,6 +1,5 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import ParticleBackground from './ParticleBackground';
 import { ADMIN_IDS } from '../lib/admins';
 
 export default function Layout({ children }) {
@@ -36,8 +35,6 @@ export default function Layout({ children }) {
 
   return (
     <div className="app">
-      <ParticleBackground />
-
       {/* ░░ ВЕРХНЯЯ СЛУЖЕБНАЯ ПОЛОСА ░░ */}
       <div className="topbar">
         <span className="tb-mark">■</span>
@@ -88,7 +85,7 @@ export default function Layout({ children }) {
         </div>
       </nav>
 
-      {/* ░░ ОБЪЯВЛЕНИЕ (если есть) ░░ */}
+      {/* ░░ ОБЪЯВЛЕНИЕ ░░ */}
       {announcement && (
         <div className="announce">
           <span className="announce-tag">NOTICE</span>
@@ -138,15 +135,9 @@ export default function Layout({ children }) {
       <style jsx>{`
         .app {
           min-height: 100vh;
-          background: var(--bg);
-          color: var(--text);
+          background: transparent;
+          color: var(--text, #eaeaea);
           position: relative;
-        }
-
-        .app > :global(.p5Canvas) {
-          position: fixed !important;
-          top: 0; left: 0;
-          z-index: 0;
         }
 
         /* ═══ ВЕРХНЯЯ ПОЛОСА ═══ */
@@ -159,18 +150,18 @@ export default function Layout({ children }) {
           gap: 10px;
           padding: 6px 20px;
           background: #000;
-          border-bottom: 1px solid var(--border);
-          font-family: var(--mono);
+          border-bottom: 1px solid var(--border, #1f1f1f);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 10px;
           letter-spacing: 2px;
           text-transform: uppercase;
-          color: var(--text-mute);
+          color: var(--text-mute, #555);
         }
         .tb-mark  { color: #fff; font-size: 11px; line-height: 1; }
         .tb-title { color: #ddd; font-weight: 700; }
         .tb-spacer { flex: 1; }
-        .tb-meta  { color: var(--text-mute); }
-        .tb-sep   { color: var(--text-fade); }
+        .tb-meta  { color: var(--text-mute, #555); }
+        .tb-sep   { color: var(--text-fade, #333); }
 
         /* ═══ НАВИГАЦИЯ ═══ */
         .navbar {
@@ -184,7 +175,7 @@ export default function Layout({ children }) {
           padding: 12px 24px;
           background: rgba(10, 10, 10, 0.92);
           backdrop-filter: blur(16px);
-          border-bottom: 1px solid var(--border);
+          border-bottom: 1px solid var(--border, #1f1f1f);
         }
 
         .nav-logo {
@@ -200,7 +191,7 @@ export default function Layout({ children }) {
           filter: grayscale(1);
         }
         .nav-logo-text {
-          font-family: var(--mono);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 13px;
           font-weight: 800;
           letter-spacing: 3px;
@@ -219,10 +210,10 @@ export default function Layout({ children }) {
           padding: 7px 12px;
           background: transparent;
           border: 1px solid transparent;
-          color: var(--text-dim);
+          color: var(--text-dim, #888);
           border-radius: 0;
           cursor: pointer;
-          font-family: var(--mono);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 11px;
           letter-spacing: 1.4px;
           transition: all 0.18s ease;
@@ -230,7 +221,7 @@ export default function Layout({ children }) {
         }
         .nav-tab:hover {
           color: #fff;
-          border-color: var(--border-2);
+          border-color: var(--border-2, #2a2a2a);
         }
         .nav-tab.active {
           background: #fff;
@@ -245,7 +236,7 @@ export default function Layout({ children }) {
           display: flex;
           align-items: center;
           gap: 12px;
-          font-family: var(--mono);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 11px;
           letter-spacing: 1.2px;
         }
@@ -253,7 +244,7 @@ export default function Layout({ children }) {
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          color: var(--text-2);
+          color: var(--text-2, #b0b0b0);
           text-transform: uppercase;
         }
         .nu-dot {
@@ -269,11 +260,11 @@ export default function Layout({ children }) {
         }
         .nav-exit {
           background: transparent;
-          border: 1px solid var(--border-2);
-          color: var(--text-2);
+          border: 1px solid var(--border-2, #2a2a2a);
+          color: var(--text-2, #b0b0b0);
           padding: 6px 12px;
           cursor: pointer;
-          font-family: var(--mono);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 10px;
           letter-spacing: 2px;
           transition: all 0.18s ease;
@@ -300,7 +291,7 @@ export default function Layout({ children }) {
             #131313 12px, #131313 24px
           );
           border-bottom: 1px dashed #444;
-          font-family: var(--mono);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 11px;
           letter-spacing: 1px;
         }
@@ -346,8 +337,8 @@ export default function Layout({ children }) {
           padding: 9px 20px;
           background: rgba(10, 10, 10, 0.95);
           backdrop-filter: blur(12px);
-          border-top: 1px solid var(--border);
-          font-family: var(--mono);
+          border-top: 1px solid var(--border, #1f1f1f);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 10px;
           letter-spacing: 1.4px;
           text-transform: uppercase;
@@ -359,19 +350,19 @@ export default function Layout({ children }) {
           flex-wrap: wrap;
         }
         .f-link {
-          color: var(--text-dim);
+          color: var(--text-dim, #888);
           text-decoration: none;
           padding: 3px 6px;
           transition: color 0.18s ease;
         }
         .f-link:hover { color: #fff; }
-        .f-sep { color: var(--text-fade); }
+        .f-sep { color: var(--text-fade, #333); }
         .f-author {
           display: inline-flex;
           align-items: center;
           gap: 6px;
           color: #ddd;
-          border: 1px solid var(--border-2);
+          border: 1px solid var(--border-2, #2a2a2a);
           padding: 3px 9px;
         }
         .f-author:hover {
@@ -386,7 +377,7 @@ export default function Layout({ children }) {
           display: inline-block;
         }
         .footer-note {
-          color: var(--text-fade);
+          color: var(--text-fade, #333);
           font-size: 9px;
           letter-spacing: 2px;
         }
@@ -409,10 +400,10 @@ export default function Layout({ children }) {
           padding: 6px 12px;
           background: rgba(12, 12, 12, 0.9);
           backdrop-filter: blur(10px);
-          border: 1px solid var(--border-2);
-          color: var(--text-2);
+          border: 1px solid var(--border-2, #2a2a2a);
+          color: var(--text-2, #b0b0b0);
           text-decoration: none;
-          font-family: var(--mono);
+          font-family: var(--mono, ui-monospace, monospace);
           font-size: 10px;
           letter-spacing: 1.6px;
           transition: all 0.18s ease;
