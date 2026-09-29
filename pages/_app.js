@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import GlobalBackground from '../components/GlobalBackground';
 
 export default function App({ Component, pageProps }) {
   return (
@@ -9,6 +10,8 @@ export default function App({ Component, pageProps }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      <GlobalBackground />
 
       <style jsx global>{`
         :root {
@@ -50,6 +53,22 @@ export default function App({ Component, pageProps }) {
         input, textarea, button, select { font-family: inherit; color: inherit; }
         a { color: inherit; }
 
+        /* Тонкий CRT-шум поверх фона (под контентом) */
+        body::after {
+          content: '';
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 1;
+          background: repeating-linear-gradient(
+            0deg,
+            rgba(255,255,255,0.012) 0px,
+            rgba(255,255,255,0.012) 1px,
+            transparent 1px,
+            transparent 3px
+          );
+        }
+
         .spinner {
           display: inline-block;
           width: 18px; height: 18px;
@@ -73,197 +92,111 @@ export default function App({ Component, pageProps }) {
           100% { transform: scale(1);   opacity: 1; }
         }
 
-        /* ═══════════════════════════════════════════════
-           FIB FORM SHELL — общий каркас для всех форм
-           ═══════════════════════════════════════════════ */
-        .form-page {
-          max-width: 720px;
-          margin: 0 auto;
-          padding-bottom: 30px;
-        }
+        /* ═══ FIB FORM SHELL — общий каркас форм (как было) ═══ */
+        .form-page { max-width: 720px; margin: 0 auto; padding-bottom: 30px; }
 
         .back-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 14px;
-          background: transparent;
-          border: 1px solid var(--border-2);
-          color: var(--text-dim);
-          cursor: pointer;
-          font-family: var(--mono);
-          font-size: 11px;
-          letter-spacing: 1.8px;
-          text-transform: uppercase;
-          margin-bottom: 20px;
-          transition: all 0.2s;
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 8px 14px; background: transparent;
+          border: 1px solid var(--border-2); color: var(--text-dim);
+          cursor: pointer; font-family: var(--mono);
+          font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase;
+          margin-bottom: 20px; transition: all 0.2s;
         }
-        .back-btn:hover {
-          background: #fff;
-          border-color: #fff;
-          color: #000;
-        }
+        .back-btn:hover { background: #fff; border-color: #fff; color: #000; }
 
         .form-shell {
-          background: #0c0c0c;
-          border: 1px solid var(--border);
-          animation: formIn 0.45s ease;
-          position: relative;
+          background: #0c0c0c; border: 1px solid var(--border);
+          animation: formIn 0.45s ease; position: relative;
         }
         .form-shell::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 4px;
+          content: ''; position: absolute;
+          top: 0; left: 0; right: 0; height: 4px;
           background: repeating-linear-gradient(
-            90deg,
-            #fff 0px, #fff 20px,
-            #0c0c0c 20px, #0c0c0c 40px
+            90deg, #fff 0px, #fff 20px, #0c0c0c 20px, #0c0c0c 40px
           );
           opacity: 0.9;
         }
 
-        .form-head {
-          padding: 26px 30px 20px;
-          border-bottom: 1px solid var(--border);
-        }
+        .form-head { padding: 26px 30px 20px; border-bottom: 1px solid var(--border); }
         .fh-stamp {
-          display: inline-block;
-          padding: 3px 10px;
-          border: 1px solid #333;
-          color: #888;
-          font-family: var(--mono);
-          font-size: 10px;
-          letter-spacing: 3px;
-          text-transform: uppercase;
-          margin-bottom: 14px;
-          background: rgba(255,255,255,0.02);
+          display: inline-block; padding: 3px 10px;
+          border: 1px solid #333; color: #888;
+          font-family: var(--mono); font-size: 10px;
+          letter-spacing: 3px; text-transform: uppercase;
+          margin-bottom: 14px; background: rgba(255,255,255,0.02);
         }
         .fh-title {
-          font-size: 28px;
-          font-weight: 900;
-          letter-spacing: 2px;
-          margin: 0;
-          color: #fff;
-          line-height: 1.1;
-          text-transform: uppercase;
+          font-size: 28px; font-weight: 900; letter-spacing: 2px;
+          margin: 0; color: #fff; line-height: 1.1; text-transform: uppercase;
         }
-        .fh-sub {
-          color: #888;
-          font-size: 13px;
-          margin: 10px 0 0;
-          line-height: 1.55;
-        }
+        .fh-sub { color: #888; font-size: 13px; margin: 10px 0 0; line-height: 1.55; }
         .fh-rule {
           height: 1px;
           background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%);
           margin: 18px 0 0;
         }
 
-        .form-body {
-          padding: 24px 30px 28px;
-        }
-
-        .field-block {
-          margin-bottom: 20px;
-        }
-        .field-block:last-of-type {
-          margin-bottom: 24px;
-        }
+        .form-body { padding: 24px 30px 28px; }
+        .field-block { margin-bottom: 20px; }
+        .field-block:last-of-type { margin-bottom: 24px; }
 
         .lbl {
-          display: block;
-          font-family: var(--mono);
-          font-size: 10px;
-          letter-spacing: 2px;
-          color: #666;
-          text-transform: uppercase;
+          display: block; font-family: var(--mono); font-size: 10px;
+          letter-spacing: 2px; color: #666; text-transform: uppercase;
           margin-bottom: 7px;
         }
-        .lbl::before {
-          content: '▸ ';
-          color: #333;
-        }
+        .lbl::before { content: '▸ '; color: #333; }
 
         .field {
-          width: 100%;
-          padding: 12px 14px;
-          background: #060606;
-          border: 1px solid #262626;
-          color: #fff;
-          border-radius: 0;
-          font-size: 14px;
-          font-family: inherit;
-          box-sizing: border-box;
-          outline: none;
-          transition: border-color 0.2s, background 0.2s;
+          width: 100%; padding: 12px 14px;
+          background: #060606; border: 1px solid #262626;
+          color: #fff; border-radius: 0; font-size: 14px;
+          font-family: inherit; box-sizing: border-box;
+          outline: none; transition: border-color 0.2s, background 0.2s;
         }
-        .field:focus {
-          border-color: #fff;
-          background: #0a0a0a;
-        }
-        .field::placeholder {
-          color: #444;
-        }
-        textarea.field {
-          resize: vertical;
-          min-height: 80px;
-          font-family: inherit;
-          line-height: 1.55;
-        }
+        .field:focus { border-color: #fff; background: #0a0a0a; }
+        .field::placeholder { color: #444; }
+        textarea.field { resize: vertical; min-height: 80px; line-height: 1.55; }
         select.field {
           appearance: none;
-          background-image: linear-gradient(45deg, transparent 50%, #666 50%),
-                            linear-gradient(135deg, #666 50%, transparent 50%);
+          background-image:
+            linear-gradient(45deg, transparent 50%, #666 50%),
+            linear-gradient(135deg, #666 50%, transparent 50%);
           background-position: calc(100% - 18px) center, calc(100% - 13px) center;
           background-size: 5px 5px, 5px 5px;
           background-repeat: no-repeat;
-          padding-right: 36px;
-          cursor: pointer;
+          padding-right: 36px; cursor: pointer;
         }
-        select.field option {
-          background: #0c0c0c;
-          color: #fff;
-        }
+        select.field option { background: #0c0c0c; color: #fff; }
 
         .submit-btn {
-          width: 100%;
-          padding: 15px 20px;
-          background: #fff;
-          color: #000;
-          border: 1px solid #fff;
-          border-radius: 0;
-          cursor: pointer;
-          font-family: var(--mono);
-          font-size: 12px;
-          font-weight: 800;
-          letter-spacing: 2.4px;
-          text-transform: uppercase;
+          width: 100%; padding: 15px 20px;
+          background: #fff; color: #000;
+          border: 1px solid #fff; border-radius: 0;
+          cursor: pointer; font-family: var(--mono);
+          font-size: 12px; font-weight: 800;
+          letter-spacing: 2.4px; text-transform: uppercase;
           transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
+          display: inline-flex; align-items: center; justify-content: center; gap: 10px;
         }
         .submit-btn:hover:not(:disabled) {
-          background: #ccc;
-          border-color: #ccc;
+          background: #ccc; border-color: #ccc;
           transform: translateY(-2px);
           box-shadow: 0 8px 30px rgba(255,255,255,0.12);
         }
-        .submit-btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-          transform: none;
-        }
+        .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
         .btn-spinner {
-          width: 14px;
-          height: 14px;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-top-color: #000;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
+          width: 14px; height: 14px;
+          border: 2px solid rgba(0,0,0,0.2); border-top-color: #000;
+          border-radius: 50%; animation: spin 0.7s linear infinite;
           display: inline-block;
+        }
+
+        .loading-line {
+          text-align: center; padding: 60px 20px;
+          color: #666; font-family: var(--mono);
+          font-size: 11px; letter-spacing: 2.4px;
         }
 
         @keyframes formIn {
