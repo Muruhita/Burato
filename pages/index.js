@@ -173,7 +173,7 @@ export default function Home() {
         width: 100%;
         max-width: 440px;
         background: rgba(12, 12, 12, 0.01);
-        backdrop-filter: blur(14px);
+        backdrop-filter: blur(2px);
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         padding: 0 0 30px;
