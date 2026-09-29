@@ -2,20 +2,20 @@ import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
 
 const DEPARTMENTS = [
-  { id: 'ib', name: 'IB (Intelligence Branch)' },
-  { id: 'cid', name: 'CID (Criminal Investigation Department)' },
-  { id: 'fa', name: 'FA (Free Agent)' },
-  { id: 'hrt', name: 'HRT (Hostage Rescue Team)' },
-  { id: 'atf', name: 'ATF (Anti Terrorism Force)' },
-  { id: 'af', name: 'AF (Air Force)' },
-  { id: 'ocu', name: 'OCU (Organized Crime Unit)' },
-  { id: 'dea', name: 'DEA (Drug Enforcement Administration)' },
-  { id: 'fna', name: 'FNA (Federal National Academy)' },
-  { id: 'nsb', name: 'NSB (National Security Branch)' },
-  { id: 'trainee', name: 'TR (Trainee)' },
+  { id: 'ib',       name: 'IB (Intelligence Branch)' },
+  { id: 'cid',      name: 'CID (Criminal Investigation Department)' },
+  { id: 'fa',       name: 'FA (Free Agent)' },
+  { id: 'hrt',      name: 'HRT (Hostage Rescue Team)' },
+  { id: 'atf',      name: 'ATF (Anti Terrorism Force)' },
+  { id: 'af',       name: 'AF (Air Force)' },
+  { id: 'ocu',      name: 'OCU (Organized Crime Unit)' },
+  { id: 'dea',      name: 'DEA (Drug Enforcement Administration)' },
+  { id: 'fna',      name: 'FNA (Federal National Academy)' },
+  { id: 'nsb',      name: 'NSB (National Security Branch)' },
+  { id: 'trainee',  name: 'TR (Trainee)' },
   { id: 'director', name: 'Director' },
-  { id: 'cod', name: 'Chief Of Discipline' },
-  { id: 'assh', name: 'Assitanse of Sheriff' }
+  { id: 'cod',      name: 'Chief Of Discipline' },
+  { id: 'assh',     name: 'Assistance of Sheriff' }
 ];
 
 export default function Profile() {
@@ -25,53 +25,35 @@ export default function Profile() {
   const [banned, setBanned] = useState(false);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
-  const [attemptsLeft, setAttemptsLeft] = useState(3); // Начальное значение
+  const [attemptsLeft, setAttemptsLeft] = useState(3);
 
-  // Функция для загрузки счётчика доступных заявок
   const fetchSpamStatus = async () => {
     try {
       const res = await fetch('/api/spam-status');
       const data = await res.json();
-      if (data.attemptsLeft !== undefined) {
-        setAttemptsLeft(data.attemptsLeft);
-      }
-      if (data.isBanned !== undefined) {
-        setBanned(data.isBanned);
-      }
-    } catch (error) {
-      console.error('Ошибка при обновлении счётчика заявок:', error);
+      if (data.attemptsLeft !== undefined) setAttemptsLeft(data.attemptsLeft);
+      if (data.isBanned !== undefined) setBanned(data.isBanned);
+    } catch (e) {
+      console.error('Ошибка при обновлении счётчика заявок:', e);
     }
   };
 
   useEffect(() => {
-    // Загрузка профиля
     fetch('/api/profile')
       .then(res => res.json())
       .then(data => {
-        if (data.error) {
-          setStatus(data.error);
-          setLoading(false);
-          return;
-        }
+        if (data.error) { setStatus(data.error); setLoading(false); return; }
         setUser(data.user);
         setNickname(data.nickname || '');
         setDepartment(data.department || '');
         setBanned(data.banned);
         setLoading(false);
       })
-      .catch(() => {
-        setStatus('Проблема загрузки профиля');
-        setLoading(false);
-      });
+      .catch(() => { setStatus('Проблема загрузки профиля'); setLoading(false); });
 
-    // Первичная загрузка счётчика
     fetchSpamStatus();
-
-    // Обновление каждые 30 минут (30 * 60 * 1000 = 1800000 мс)
-    const intervalId = setInterval(fetchSpamStatus, 30 * 60 * 1000);
-
-    // Очистка интервала при размонтировании
-    return () => clearInterval(intervalId);
+    const id = setInterval(fetchSpamStatus, 30 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
 
   const saveProfile = async () => {
@@ -84,143 +66,399 @@ export default function Profile() {
     setStatus(data.message || data.error);
   };
 
-  if (loading) return <p className="loading">Загрузка...</p>;
+  if (loading) {
+    return <Layout><div className="loading-line">ЗАГРУЗКА ПРОФИЛЯ...</div></Layout>;
+  }
+
+  const deptName = DEPARTMENTS.find(d => d.id === department)?.name || department || '—';
 
   return (
     <Layout>
-      <div className="profile-container">
-        <h1>Ваш профиль</h1>
+      <div className="info">
+        <header className="page-head">
+          <div className="ph-stamp">DOSSIER · PERSONAL FILE</div>
+          <h1 className="ph-title">ПРОФИЛЬ<span className="ph-dot">.</span></h1>
+          <p className="ph-sub">Ваша учётная запись в системе FIB Forms</p>
+          <div className="ph-rule" />
+        </header>
+
         {user && (
-          <div className="profile-card">
-            <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} alt="Avatar" className="avatar" />
-            <h2>{user.username}</h2>
-            <p>Discord ID: {user.id}</p>
-            <div className={`status ${banned ? 'banned' : 'active'}`}>
-              {banned ? '⛔ Заблокирован' : '✅ Нет блокировки'}
-            </div>
+          <>
+            {/* КАРТОЧКА АГЕНТА */}
+            <section className="panel">
+              <div className="panel-head">
+                <span className="p-num">01</span>
+                <h2 className="p-title">УДОСТОВЕРЕНИЕ</h2>
+                <span className={`p-tag ${banned ? 'p-tag-danger' : 'p-tag-on'}`}>
+                  {banned ? 'BLOCKED' : 'ACTIVE'}
+                </span>
+              </div>
+              <div className="panel-body">
+                <div className="id-card">
+                  <div className="id-photo">
+                    {user.avatar ? (
+                      <img
+                        src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
+                        alt="Avatar"
+                      />
+                    ) : (
+                      <div className="id-photo-empty">?</div>
+                    )}
+                  </div>
 
-            <div className="spam-counter">
-              🕐 Доступно заявок на этот час: <strong>{banned ? 0 : attemptsLeft}</strong>
-            </div>
+                  <div className="id-info">
+                    <div className="id-row">
+                      <span className="id-key">USERNAME</span>
+                      <span className="id-val">{user.username}</span>
+                    </div>
+                    <div className="id-row">
+                      <span className="id-key">DISCORD ID</span>
+                      <span className="id-val id-mono">{user.id}</span>
+                    </div>
+                    <div className="id-row">
+                      <span className="id-key">CALLSIGN</span>
+                      <span className="id-val">{nickname || '—'}</span>
+                    </div>
+                    <div className="id-row">
+                      <span className="id-key">DEPARTMENT</span>
+                      <span className="id-val">{deptName}</span>
+                    </div>
+                    <div className="id-row">
+                      <span className="id-key">STATUS</span>
+                      <span className={`id-val id-status ${banned ? 'is-banned' : 'is-active'}`}>
+                        {banned ? '⛔ ЗАБЛОКИРОВАН' : '✅ АКТИВЕН'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="field">
-              <label>Игровой ник (Имя Фамилия + Статик):</label>
-              <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Например: Name Surname | 123456" />
-            </div>
+                <div className="quota">
+                  <span className="quota-lbl">ДОСТУПНО ЗАЯВОК В ЧАС</span>
+                  <span className="quota-val">{banned ? 0 : attemptsLeft}</span>
+                  <span className="quota-max">/ 6</span>
+                </div>
+              </div>
+            </section>
 
-            <div className="field">
-              <label>Ваш отдел:</label>
-              <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                <option value="">-- Не выбран --</option>
-                {DEPARTMENTS.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* РЕДАКТИРОВАНИЕ */}
+            <section className="panel">
+              <div className="panel-head">
+                <span className="p-num">02</span>
+                <h2 className="p-title">РЕДАКТИРОВАНИЕ ДАННЫХ</h2>
+                <span className="p-tag">EDIT</span>
+              </div>
+              <div className="panel-body">
+                <div className="field-block">
+                  <label className="lbl">Игровой ник (Имя Фамилия + Статик)</label>
+                  <input
+                    className="field"
+                    type="text"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="Name Surname | 123456"
+                  />
+                </div>
 
-            <button onClick={saveProfile} className="save-btn">Сохранить данные</button>
-            {status && <p className="status-msg">{status}</p>}
-          </div>
+                <div className="field-block">
+                  <label className="lbl">Ваш отдел</label>
+                  <select
+                    className="field"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                  >
+                    <option value="">-- НЕ ВЫБРАН --</option>
+                    {DEPARTMENTS.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <button className="btn btn-solid btn-wide" onClick={saveProfile}>
+                  💾 СОХРАНИТЬ ДАННЫЕ
+                </button>
+
+                {status && <p className="msg">{status}</p>}
+              </div>
+            </section>
+          </>
         )}
       </div>
 
       <style jsx>{`
-        .profile-container {
-          max-width: 500px;
-          margin: 0 auto;
-          text-align: center;
-        }
-        h1 {
-          margin-bottom: 30px;
-          color: white;
-        }
-        .profile-card {
-          background: #161616;
-          border: 1px solid #333;
-          padding: 40px;
-          border-radius: 20px;
-        }
-        .avatar {
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          margin-bottom: 20px;
-        }
-        h2 {
-          color: white;
-          margin-bottom: 10px;
-        }
-        .status {
+        .info { max-width: 800px; margin: 0 auto; }
+
+        .page-head { margin-bottom: 26px; animation: fadeIn 0.45s ease; }
+        .ph-stamp {
           display: inline-block;
-          padding: 5px 15px;
-          border-radius: 20px;
-          font-size: 14px;
-          margin: 15px 0;
+          padding: 3px 10px;
+          border: 1px solid #333;
+          color: #888;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          margin-bottom: 14px;
         }
-        .status.banned {
-          background: #ff4444;
-          color: white;
+        .ph-title {
+          font-size: 42px;
+          font-weight: 900;
+          letter-spacing: 3px;
+          margin: 0;
+          color: #fff;
+          line-height: 1;
+          text-transform: uppercase;
         }
-        .status.active {
-          background: #4CAF50;
-          color: white;
+        .ph-dot { color: #fff; animation: blink 1.2s steps(2, start) infinite; }
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          50.01%, 100% { opacity: 0.15; }
         }
-        .spam-counter {
-          background: rgba(88, 101, 242, 0.1);
-          border: 1px solid rgba(88, 101, 242, 0.3);
-          border-radius: 10px;
-          padding: 10px;
-          margin: 15px 0;
-          color: #aaa;
-          font-size: 14px;
+        .ph-sub { color: #888; font-size: 13px; margin: 12px 0 0; }
+        .ph-rule {
+          height: 1px;
+          background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%);
+          margin: 18px 0 0;
         }
-        .spam-counter strong {
-          color: white;
+
+        .panel {
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+          margin-bottom: 16px;
+          animation: cardIn 0.45s ease;
         }
-        .field {
+        .panel-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 18px;
+          border-bottom: 1px solid #1f1f1f;
+          background: #0a0a0a;
+        }
+        .p-num {
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          color: #666;
+          font-weight: 700;
+        }
+        .p-title {
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 2.4px;
+          color: #fff;
+          margin: 0;
+          text-transform: uppercase;
+          flex: 1;
+        }
+        .p-tag {
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: #666;
+          border: 1px solid #2a2a2a;
+          padding: 2px 8px;
+        }
+        .p-tag-on {
+          color: #000;
+          background: #fff;
+          border-color: #fff;
+        }
+        .p-tag-danger {
+          color: #ff8080;
+          border-color: #553030;
+        }
+
+        .panel-body { padding: 22px; }
+
+        /* ── УДОСТОВЕРЕНИЕ ── */
+        .id-card {
+          display: flex;
+          gap: 22px;
+          align-items: flex-start;
+          padding: 20px;
+          background: #060606;
+          border: 1px solid #1a1a1a;
           margin-bottom: 20px;
-          text-align: left;
         }
-        label {
+        .id-photo {
+          flex: 0 0 110px;
+          height: 110px;
+          border: 1px solid #2a2a2a;
+          overflow: hidden;
+          background: #0a0a0a;
+        }
+        .id-photo img {
+          width: 100%; height: 100%;
+          object-fit: cover;
           display: block;
-          color: #aaa;
-          margin-bottom: 8px;
+          filter: grayscale(0.15) contrast(1.05);
         }
-        input, select {
+        .id-photo-empty {
+          width: 100%; height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #333;
+          font-family: ui-monospace, monospace;
+          font-size: 32px;
+        }
+
+        .id-info { flex: 1; min-width: 0; }
+        .id-row {
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          padding: 5px 0;
+          border-bottom: 1px dashed #1a1a1a;
+        }
+        .id-row:last-child { border-bottom: none; }
+        .id-key {
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #666;
+          min-width: 110px;
+          text-transform: uppercase;
+          flex-shrink: 0;
+        }
+        .id-val {
+          color: #fff;
+          font-size: 14px;
+          font-weight: 600;
+          word-break: break-word;
+        }
+        .id-mono {
+          font-family: ui-monospace, monospace;
+          letter-spacing: 0.5px;
+          font-size: 13px;
+        }
+        .id-status.is-active { color: #8ee08e; }
+        .id-status.is-banned { color: #ff8080; }
+
+        /* ── КВОТА ── */
+        .quota {
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+          padding: 14px 18px;
+          background: #060606;
+          border: 1px solid #1a1a1a;
+          font-family: ui-monospace, monospace;
+        }
+        .quota-lbl {
+          flex: 1;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #666;
+          text-transform: uppercase;
+        }
+        .quota-val {
+          font-size: 22px;
+          font-weight: 900;
+          color: #fff;
+          line-height: 1;
+        }
+        .quota-max {
+          font-size: 12px;
+          color: #555;
+        }
+
+        /* ── ПОЛЯ ── */
+        .field-block { margin-bottom: 20px; }
+        .lbl {
+          display: block;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #666;
+          text-transform: uppercase;
+          margin-bottom: 7px;
+        }
+        .lbl::before { content: '▸ '; color: #333; }
+        .field {
           width: 100%;
-          padding: 12px;
-          background: #222;
-          border: 1px solid #444;
-          color: white;
-          border-radius: 8px;
+          padding: 12px 14px;
+          background: #060606;
+          border: 1px solid #262626;
+          color: #fff;
+          border-radius: 0;
+          font-size: 14px;
+          font-family: inherit;
           box-sizing: border-box;
+          outline: none;
+          transition: border-color 0.2s;
         }
-        select option {
-          background: #222;
+        .field:focus { border-color: #fff; }
+        .field::placeholder { color: #444; }
+        select.field {
+          appearance: none;
+          background-image: linear-gradient(45deg, transparent 50%, #666 50%),
+                            linear-gradient(135deg, #666 50%, transparent 50%);
+          background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+          background-size: 5px 5px, 5px 5px;
+          background-repeat: no-repeat;
+          padding-right: 36px;
+          cursor: pointer;
         }
-        .save-btn {
-          width: 100%;
-          padding: 12px;
+        select.field option { background: #0c0c0c; color: #fff; }
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 18px;
+          background: transparent;
+          border: 1px solid #333;
+          color: #eaeaea;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          transition: all 0.2s;
+        }
+        .btn:hover { background: #fff; border-color: #fff; color: #000; }
+        .btn-solid {
           background: #fff;
           color: #000;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: bold;
-          margin-top: 10px;
+          border-color: #fff;
+          font-weight: 800;
         }
-        .save-btn:hover {
-          background: #ccc;
-        }
-        .status-msg {
-          margin-top: 10px;
-          color: #4CAF50;
-          font-size: 14px;
-        }
-        .loading {
-          color: #aaa;
+        .btn-solid:hover { background: #ccc; border-color: #ccc; }
+        .btn-wide { width: 100%; }
+
+        .msg {
+          margin-top: 12px;
+          color: #4caf50;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1.4px;
           text-align: center;
-          padding: 40px;
+        }
+
+        .loading-line {
+          text-align: center;
+          padding: 60px 20px;
+          color: #666;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2.4px;
+        }
+
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 640px) {
+          .ph-title { font-size: 28px; letter-spacing: 2px; }
+          .panel-body { padding: 16px; }
+          .id-card { flex-direction: column; align-items: center; text-align: center; }
+          .id-key { min-width: auto; }
+          .id-row { flex-direction: column; gap: 4px; align-items: flex-start; }
+          .id-key { display: block; }
         }
       `}</style>
     </Layout>
