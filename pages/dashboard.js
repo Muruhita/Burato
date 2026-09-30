@@ -4,21 +4,37 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 
 const FORMS = [
-  { code: 'FORM-001', title: 'Запрос на повышение',   icon: '⬆',  path: '/forms/promotion',        desc: 'Запрос на повышение по рангу',                     tag: 'PERSONNEL' },
-  { code: 'FORM-002', title: 'Перевод в отдел',       icon: '⤳',  path: '/forms/transfer',         desc: 'Перевод в другую организацию',                     tag: 'TRANSFER' },
-  { code: 'FORM-003', title: 'Отчёт на повышение',    icon: '▤',  path: '/forms/report',           desc: 'Отчёт на повышение в своём отделе',                tag: 'REPORT' },
-  { code: 'FORM-004', title: 'Отчёт на повышение HR', icon: '★',  path: '/forms/high-rank-report', desc: 'Отчёты на повышения от Dep.Head и выше',           tag: 'HIGH-RANK' },
-  { code: 'FORM-005', title: 'Рапорт на увольнение',  icon: '✕',  path: '/forms/resignation',      desc: 'Покинуть FIB',                                     tag: 'PERSONNEL' },
-  { code: 'FORM-006', title: 'Восстановление',        icon: '↻',  path: '/forms/reinstatement',    desc: 'Восстановиться в FIB',                             tag: 'RETURN' },
-  { code: 'FORM-007', title: 'Перевод в FIB',         icon: '⛨',  path: '/forms/transfer-to-fib',  desc: 'Перевестись в FIB',                                tag: 'TRANSFER' },
-  { code: 'FORM-008', title: 'Спец. вооружение',      icon: '⌖',  path: '/forms/weapon-request',   desc: 'Запросить спец. оружие',                           tag: 'ARMORY' },
-  { code: 'FORM-009', title: 'Снятие ЧС',             icon: '⚿',  path: '/forms/withdrawal',       desc: 'Запрос на снятие ЧС',                              tag: 'CLEARANCE' },
-  { code: 'FORM-010', title: 'Трудоустройство',       icon: '⎔',  path: '/forms/hiring',           desc: 'Вступить в FIB',                                   tag: 'RECRUIT' },
-  { code: 'FORM-011', title: 'Жалоба',                icon: '!',  path: '/forms/claim',            desc: 'Подать жалобу на игрока',                          tag: 'COMPLAINT' },
+  // ── Все базовые ──
+  { id: 'promotion',       code: 'FORM-001', title: 'Запрос на повышение',   icon: '⬆',  path: '/forms/promotion',        desc: 'Запрос на повышение по рангу',                     tag: 'PERSONNEL' },
+  { id: 'transfer',        code: 'FORM-002', title: 'Перевод в отдел',       icon: '⤳',  path: '/forms/transfer',         desc: 'Перевод в другую организацию',                     tag: 'TRANSFER' },
+  { id: 'report',          code: 'FORM-003', title: 'Отчёт на повышение',    icon: '▤',  path: '/forms/report',           desc: 'Отчёт на повышение в своём отделе',                tag: 'REPORT' },
+  { id: 'highrank',        code: 'FORM-004', title: 'Отчёт на повышение HR', icon: '★',  path: '/forms/high-rank-report', desc: 'Отчёты на повышения от Dep.Head и выше',           tag: 'HIGH-RANK' },
+  { id: 'resignation',     code: 'FORM-005', title: 'Рапорт на увольнение',  icon: '✕',  path: '/forms/resignation',      desc: 'Покинуть FIB',                                     tag: 'PERSONNEL' },
+  { id: 'reinstatement',   code: 'FORM-006', title: 'Восстановление',        icon: '↻',  path: '/forms/reinstatement',    desc: 'Восстановиться в FIB',                             tag: 'RETURN' },
+  { id: 'transferToFib',   code: 'FORM-007', title: 'Перевод в FIB',         icon: '⛨',  path: '/forms/transfer-to-fib',  desc: 'Перевестись в FIB',                                tag: 'TRANSFER' },
+  { id: 'weaponRequest',   code: 'FORM-008', title: 'Спец. вооружение',      icon: '⌖',  path: '/forms/weapon-request',   desc: 'Запросить спец. оружие',                           tag: 'ARMORY' },
+  { id: 'withdrawal',      code: 'FORM-009', title: 'Снятие ЧС',             icon: '⚿',  path: '/forms/withdrawal',       desc: 'Запрос на снятие ЧС',                              tag: 'CLEARANCE' },
+  { id: 'hiring',          code: 'FORM-010', title: 'Трудоустройство',       icon: '⎔',  path: '/forms/hiring',           desc: 'Вступить в FIB',                                   tag: 'RECRUIT' },
+  { id: 'claim',           code: 'FORM-011', title: 'Жалоба',                icon: '!',  path: '/forms/claim',            desc: 'Подать жалобу на игрока',                          tag: 'COMPLAINT' },
+  // ── Отпуск ──
+  { id: 'leave',           code: 'FORM-012', title: 'Отпуск',                icon: '◐',  path: '/forms/leave',            desc: 'Заявка на IC или OOC отпуск',                      tag: 'PERSONNEL' },
+  // ── ДБ ──
+  { id: 'db',              code: 'FORM-013', title: 'Запрос на ДБ',          icon: '☰',  path: '/forms/db',               desc: 'Запрос на день блата',                             tag: 'PERSONNEL' },
+  { id: 'ukmb',            code: 'FORM-015', title: 'Запрос на УКМБ',        icon: '❖',  path: '/forms/ukmb',             desc: 'Учебно-квалификационный минимум бойца',            tag: 'ACADEMY' },
+  // ── Trainee ──
+  { id: 'exam',            code: 'FORM-014', title: 'Запрос на экзамен',     icon: '◇',  path: '/forms/exam',             desc: 'Запрос на сдачу экзамена (устный / практический)', tag: 'TRAINING' },
+];
+
+const CATEGORIES = [
+  { id: 'all',     label: 'ВСЕ ФОРМЫ', icon: '▤', formIds: null },
+  { id: 'db',      label: 'ДБ',        icon: '☰', formIds: ['db', 'ukmb'] },
+  { id: 'trainee', label: 'TRAINEE',   icon: '◇', formIds: ['exam'] },
+  { id: 'leave',   label: 'ОТПУСК',    icon: '◐', formIds: ['leave'] },
 ];
 
 export default function Dashboard() {
   const router = useRouter();
+  const [activeCat, setActiveCat] = useState('all');
 
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
@@ -41,6 +57,11 @@ export default function Dashboard() {
   const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
+  const activeCategory = CATEGORIES.find(c => c.id === activeCat) || CATEGORIES[0];
+  const visibleForms = activeCategory.formIds
+    ? FORMS.filter(f => activeCategory.formIds.includes(f.id))
+    : FORMS;
+
   return (
     <Layout>
       <div className="dash">
@@ -62,7 +83,7 @@ export default function Dashboard() {
           <div className="ph-stamp">DEPARTMENT OF JUSTICE</div>
           <h1 className="ph-title">ФОРМЫ<span className="ph-dot">.</span></h1>
           <p className="ph-sub">
-            Единая система подачи заявок · Выберите бланк для заполнения
+            Единая система подачи заявок · Выберите категорию или бланк
           </p>
           <div className="ph-rule" />
           <div className="ph-meta">
@@ -74,14 +95,33 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* ─── КАТЕГОРИИ ─── */}
+        <nav className="cats">
+          {CATEGORIES.map(cat => {
+            const active = activeCat === cat.id;
+            const count = cat.formIds ? cat.formIds.length : FORMS.length;
+            return (
+              <button
+                key={cat.id}
+                className={`cat ${active ? 'active' : ''}`}
+                onClick={() => setActiveCat(cat.id)}
+              >
+                <span className="cat-icon">{cat.icon}</span>
+                <span className="cat-label">{active ? `[ ${cat.label} ]` : cat.label}</span>
+                <span className="cat-count">{String(count).padStart(2, '0')}</span>
+              </button>
+            );
+          })}
+        </nav>
+
         {/* ─── СЕТКА ФОРМ ─── */}
-        <section className="grid">
-          {FORMS.map((form, i) => (
+        <section className="grid" key={activeCat}>
+          {visibleForms.map((form, i) => (
             <article
               key={form.code}
               className="folder"
               onClick={() => router.push(form.path)}
-              style={{ animationDelay: `${i * 0.05}s` }}
+              style={{ animationDelay: `${i * 0.04}s` }}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter') router.push(form.path); }}
@@ -93,7 +133,6 @@ export default function Dashboard() {
 
               <div className="folder-body">
                 <div className="folder-icon">{form.icon}</div>
-
                 <div className="folder-text">
                   <h3 className="folder-title">{form.title}</h3>
                   <p className="folder-desc">{form.desc}</p>
@@ -105,7 +144,6 @@ export default function Dashboard() {
                 <span className="folder-arrow">→</span>
               </div>
 
-              {/* угловые метки */}
               <span className="corner corner-tl" />
               <span className="corner corner-tr" />
               <span className="corner corner-bl" />
@@ -159,24 +197,15 @@ export default function Dashboard() {
           gap: 10px;
           flex-wrap: wrap;
         }
-        .dh-mark {
-          color: #fff;
-          font-size: 12px;
-          line-height: 1;
-        }
-        .dh-title {
-          color: #fff;
-          font-weight: 700;
-        }
-        .dh-meta {
-          color: #888;
-        }
+        .dh-mark { color: #fff; font-size: 12px; line-height: 1; }
+        .dh-title { color: #fff; font-weight: 700; }
+        .dh-meta { color: #888; }
         .dh-sep { color: #444; }
 
         /* ═══ ЗАГОЛОВОК ═══ */
         .page-head {
           position: relative;
-          margin-bottom: 34px;
+          margin-bottom: 26px;
           animation: fadeIn 0.55s ease;
         }
         .ph-stamp {
@@ -229,11 +258,50 @@ export default function Dashboard() {
           color: #777;
           text-transform: uppercase;
         }
-        .ph-meta em {
-          color: #fff;
-          font-style: normal;
-          font-weight: 700;
+        .ph-meta em { color: #fff; font-style: normal; font-weight: 700; }
+
+        /* ═══ КАТЕГОРИИ ═══ */
+        .cats {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 22px;
+          animation: fadeIn 0.6s ease;
         }
+        .cat {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 14px;
+          background: transparent;
+          border: 1px solid #2a2a2a;
+          color: #999;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1.6px;
+          text-transform: uppercase;
+          transition: all 0.18s ease;
+        }
+        .cat:hover {
+          color: #fff;
+          border-color: #555;
+        }
+        .cat.active {
+          background: #fff;
+          border-color: #fff;
+          color: #000;
+          font-weight: 800;
+        }
+        .cat-icon { font-size: 12px; line-height: 1; }
+        .cat-count {
+          font-size: 10px;
+          opacity: 0.6;
+          padding-left: 6px;
+          border-left: 1px solid currentColor;
+          line-height: 1;
+        }
+        .cat.active .cat-count { opacity: 0.9; }
 
         /* ═══ СЕТКА ═══ */
         .grid {
@@ -280,14 +348,9 @@ export default function Dashboard() {
           color: #000;
           border-color: #000;
         }
-        .folder:hover .folder-tab {
-          border-bottom-color: #000;
-        }
-        .folder:hover .folder-foot {
-          border-top-color: #000;
-        }
+        .folder:hover .folder-tab { border-bottom-color: #000; }
+        .folder:hover .folder-foot { border-top-color: #000; }
 
-        /* ── верхний ярлык ── */
         .folder-tab {
           display: flex;
           justify-content: space-between;
@@ -311,7 +374,6 @@ export default function Dashboard() {
           transition: color 0.25s ease;
         }
 
-        /* ── тело ── */
         .folder-body {
           display: flex;
           align-items: flex-start;
@@ -331,9 +393,7 @@ export default function Dashboard() {
           background: #000;
           transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
         }
-        .folder:hover .folder-icon {
-          background: transparent;
-        }
+        .folder:hover .folder-icon { background: transparent; }
         .folder-text { flex: 1; min-width: 0; }
         .folder-title {
           color: #fff;
@@ -352,7 +412,6 @@ export default function Dashboard() {
           transition: color 0.25s ease;
         }
 
-        /* ── подвал ── */
         .folder-foot {
           display: flex;
           justify-content: space-between;
@@ -373,11 +432,8 @@ export default function Dashboard() {
           color: #fff;
           transition: transform 0.25s ease, color 0.25s ease;
         }
-        .folder:hover .folder-arrow {
-          transform: translateX(4px);
-        }
+        .folder:hover .folder-arrow { transform: translateX(4px); }
 
-        /* ── угловые метки ── */
         .corner {
           position: absolute;
           width: 8px;
@@ -432,6 +488,9 @@ export default function Dashboard() {
           }
           .ph-title { font-size: 34px; letter-spacing: 2px; }
           .ph-sub { font-size: 13px; }
+          .cats { gap: 4px; }
+          .cat { padding: 8px 10px; font-size: 10px; letter-spacing: 1.2px; }
+          .cat-count { display: none; }
           .grid { grid-template-columns: 1fr; gap: 12px; }
           .folder { padding: 18px 16px 14px; }
           .folder-body { gap: 12px; min-height: auto; }
