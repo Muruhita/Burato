@@ -68,7 +68,7 @@ const EMBED_IMAGE_HOSTS = [
 // ─────────────────────────────────────────────────────────────
 // 🧵 Форум отпусков — вебхук + ID веток
 // ─────────────────────────────────────────────────────────────
-const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1554629063606403163/TBJAaaXvcN5n4Mjg7tnn7-zy-C1-lp0TV5uoMi199A5o8f9YLdq3-6rg5WQioH3sYUK5';
+const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1544351477844418570/9Zd10538AS31Wrtsfy1G312En-qZnvDEKYBJz19WIqdHpWO48MlhMx_xVeA0kLF2tdJ1';
 
 const LEAVE_THREADS = {
   IC:  '1479695882302787624',
