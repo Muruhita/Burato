@@ -2,7 +2,7 @@ import { verifyToken } from '../../lib/discord';
 import { addToBlacklist } from '../../lib/blacklist';
 import { getBanInfo } from '../../lib/ban-utils';
 import { containsBadWords, findBadWord, findAllBadWords } from '../../lib/badwords';
-import { checkSpam, isFormSubmissionActive } from '../../lib/antispam';
+import { checkSpam, isFormSubmissionActive, isFormTypeActive } from '../../lib/antispam';
 import { sanitizeObject } from '../../lib/sanitize';
 import redis from '../../lib/redis';
 import {
@@ -153,6 +153,11 @@ const FNA_ROLE = '1274110499356934207';
 const UKMB_ROLES = [DIRECTOR_ROLE, DEP_DIRECTOR_ROLE];
 
 // ─────────────────────────────────────────────────────────────
+// 🎯 Точечная блокировка отдельных форм (ДБ, УКМБ)
+// ─────────────────────────────────────────────────────────────
+const TYPE_TOGGLES = ['db', 'ukmb'];
+
+// ─────────────────────────────────────────────────────────────
 // 🎖 Подбор ролей для Leave по званию
 // ─────────────────────────────────────────────────────────────
 function pickLeaveRoles(position, department) {
@@ -163,23 +168,18 @@ function pickLeaveRoles(position, department) {
   switch (position) {
     case 'assistant_director':
     case 'deputy_director':
-      // Пингуются только Director + Dep.Director
       return [DIRECTOR_ROLE, DEP_DIRECTOR_ROLE];
 
     case 'head_of_dept':
-      // Пингуется только Curator отдела
       return [deptRoles.curator];
 
     case 'deputy_head':
-      // Пингуется Curator + Head отдела
       return [deptRoles.curator, deptRoles.head];
 
     case 'instructor':
-      // Пингуется High + Dep.Head отдела
       return [deptRoles.high, deptRoles.depHead];
 
     case 'rank_below_10':
-      // Пингуется только High отдела
       return [deptRoles.high];
 
     default:
@@ -299,6 +299,16 @@ export default async function handler(req, res) {
 
   const userId = user.id;
   const username = user.username;
+
+  // ─────────────────────────────────────────────────
+  // 🎯 Точечная блокировка отдельных форм (ДБ, УКМБ)
+  // ─────────────────────────────────────────────────
+  if (TYPE_TOGGLES.includes(type)) {
+    const typeActive = await isFormTypeActive(type);
+    if (!typeActive) {
+      return res.status(403).json({ error: '🚫 Эта форма временно отключена администрацией.' });
+    }
+  }
 
   // ─────────────────────────────────────────────────
   // 🔒 Слой 1: whitelist + протоколы + приватные IP
