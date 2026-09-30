@@ -667,11 +667,12 @@ function buildFields(type, department, targetDepartment, data, userId, username)
   if (type === 'db') {
     return [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
-      { name: '📊 С какого - на какой ранг', value: data.rankRange || 'Не указано', inline: false },
+      { name: '📊 С какого ранга', value: data.fromRank || 'Не указано', inline: true },
+      { name: '🎯 На какой ранг', value: data.toRank || 'Не указано', inline: true },
       ...baseFields
     ];
   }
-
+  
   if (type === 'exam') {
     const examTypeMap = {
       'oral': '🗣 Устный',
