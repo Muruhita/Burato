@@ -4,11 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 
-const RANK_OPTIONS = [
-  '1-2 ранг', '2-3 ранг', '3-4 ранг', '4-5 ранг', '5-6 ранг',
-  '6-7 ранг', '7-8 ранг', '8-9 ранг', '9-10 ранг', '10-11 ранг',
-  '11-12 ранг', '12-13 ранг', '13-14 ранг', '14-15 ранг'
-];
+const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'];
 
 export default function DBForm() {
   const router = useRouter();
@@ -16,7 +12,7 @@ export default function DBForm() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [formData, setFormData] = useState({ fullName: '', rankRange: '' });
+  const [formData, setFormData] = useState({ fullName: '', fromRank: '', toRank: '' });
 
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
@@ -64,7 +60,8 @@ export default function DBForm() {
         body: JSON.stringify({
           type: 'db',
           fullName: formData.fullName,
-          rankRange: formData.rankRange
+          fromRank: formData.fromRank,
+          toRank: formData.toRank
         })
       });
       if (res.ok) {
@@ -105,7 +102,7 @@ export default function DBForm() {
             <div className="fh-stamp">FORM-013 · PERSONNEL</div>
             <h1 className="fh-title">Запрос на ДБ</h1>
             <p className="fh-sub">
-              Запрос на день блата (ДБ). Укажите диапазон рангов и приложите данные для рассмотрения.
+              Запрос на день блата (ДБ). Укажите свои данные и диапазон повышения.
             </p>
             <div className="fh-rule" />
           </header>
@@ -124,15 +121,28 @@ export default function DBForm() {
             </div>
 
             <div className="field-block">
-              <label className="lbl">С какого на какой ранг</label>
+              <label className="lbl">С какого ранга</label>
               <select
                 className="field"
                 required
-                value={formData.rankRange}
-                onChange={(e) => setFormData({ ...formData, rankRange: e.target.value })}
+                value={formData.fromRank}
+                onChange={(e) => setFormData({ ...formData, fromRank: e.target.value })}
               >
-                <option value="">-- ВЫБЕРИТЕ ДИАПАЗОН --</option>
-                {RANK_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                <option value="">-- ВЫБЕРИТЕ РАНГ --</option>
+                {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+
+            <div className="field-block">
+              <label className="lbl">На какой ранг</label>
+              <select
+                className="field"
+                required
+                value={formData.toRank}
+                onChange={(e) => setFormData({ ...formData, toRank: e.target.value })}
+              >
+                <option value="">-- ВЫБЕРИТЕ РАНГ --</option>
+                {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
 
