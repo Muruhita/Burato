@@ -68,38 +68,133 @@ const EMBED_IMAGE_HOSTS = [
 // ─────────────────────────────────────────────────────────────
 // 🧵 Форум отпусков — вебхук + ID веток
 // ─────────────────────────────────────────────────────────────
-const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1544351477844418570/9Zd10538AS31Wrtsfy1G312En-qZnvDEKYBJz19WIqdHpWO48MlhMx_xVeA0kLF2tdJ1';
+const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1554629063606403163/TBJAaaXvcN5n4Mjg7tnn7-zy-C1-lp0TV5uoMi199A5o8f9YLdq3-6rg5WQioH3sYUK5';
 
 const LEAVE_THREADS = {
-  IC:  '1479695882302787624',
-  OOC: '1479656377994580060'
+  IC:  '1554628745430695976',
+  OOC: '1554628906697498695'
 };
 
 // ─────────────────────────────────────────────────────────────
-// 🏢 Роли отделов для формы Leave
+// 🏢 Роли отделов для формы Leave (Curator / Head / Dep.Head / High)
 // ─────────────────────────────────────────────────────────────
-const LEAVE_ROLES = {
-  IB:  ['1520684340483461211', '1520681660650225755', '1520680899799289876', '1398200840900055071'],
-  CID: ['1520684359684718713', '1520681666241237002', '1520680908229840978', '1398200760843374652'],
-  FA:  ['1520684374243147908', '1520681669173186631', '1520680932062007326', '1398200891353468928'],
-  HRT: ['1520684348955689121', '1520681663460544633', '1520680902533845053', '1398201557635567636'],
-  ATF: ['1520684344086237215', '1520681675774890004', '1520680905671184436', '1398201048598057041'],
-  AF:  ['1520684363497603192', '1520681681366028361', '1520680937900474408', '1398200952602755103'],
-  OCU: ['1520684354286784622', '1520681678706704394', '1520680921928437810', '1418771091291115631'],
-  DEA: ['1520684367188328468', '1520681684603895880', '1520680926278058125', '1398201115379761283'],
-  FNA: ['1520684351560487093', '1520681672499003533', '1520680960134221944', '1385530645186613311'],
-  NSB: ['1520684346531512422', '1520681687728525342', '1520680911539273799', '1398201167154122752'],
+const LEAVE_ROLE_MAP = {
+  IB: {
+    curator: '1520684340483461211',
+    head:    '1520681660650225755',
+    depHead: '1520680899799289876',
+    high:    '1398200840900055071'
+  },
+  CID: {
+    curator: '1520684359684718713',
+    head:    '1520681666241237002',
+    depHead: '1520680908229840978',
+    high:    '1398200760843374652'
+  },
+  FA: {
+    curator: '1520684374243147908',
+    head:    '1520681669173186631',
+    depHead: '1520680932062007326',
+    high:    '1398200891353468928'
+  },
+  HRT: {
+    curator: '1520684348955689121',
+    head:    '1520681663460544633',
+    depHead: '1520680902533845053',
+    high:    '1398201557635567636'
+  },
+  ATF: {
+    curator: '1520684344086237215',
+    head:    '1520681675774890004',
+    depHead: '1520680905671184436',
+    high:    '1398201048598057041'
+  },
+  AF: {
+    curator: '1520684363497603192',
+    head:    '1520681681366028361',
+    depHead: '1520680937900474408',
+    high:    '1398200952602755103'
+  },
+  OCU: {
+    curator: '1520684354286784622',
+    head:    '1520681678706704394',
+    depHead: '1520680921928437810',
+    high:    '1418771091291115631'
+  },
+  DEA: {
+    curator: '1520684367188328468',
+    head:    '1520681684603895880',
+    depHead: '1520680926278058125',
+    high:    '1398201115379761283'
+  },
+  FNA: {
+    curator: '1520684351560487093',
+    head:    '1520681672499003533',
+    depHead: '1520680960134221944',
+    high:    '1385530645186613311'
+  },
+  NSB: {
+    curator: '1520684346531512422',
+    head:    '1520681687728525342',
+    depHead: '1520680911539273799',
+    high:    '1398201167154122752'
+  }
 };
 
 // ─────────────────────────────────────────────────────────────
+// 👔 Глобальные роли Director / Dep.Director
+// ─────────────────────────────────────────────────────────────
+const DIRECTOR_ROLE = '1274110499377778755';
+const DEP_DIRECTOR_ROLE = '1274110499377778756';
+
 // 🎓 Роли для форм ДБ, Экзамен, УКМБ
-// ─────────────────────────────────────────────────────────────
 const HIGH_STAFF_ROLE = '1274110499356934211';
 const FNA_ROLE = '1274110499356934207';
-const UKMB_ROLES = [
-  '1274110499377778755', // Director — проверь ID
-  '1274110499377778756'  // Dep.Director — проверь ID
-];
+const UKMB_ROLES = [DIRECTOR_ROLE, DEP_DIRECTOR_ROLE];
+
+// ─────────────────────────────────────────────────────────────
+// 🎖 Подбор ролей для Leave по званию
+// ─────────────────────────────────────────────────────────────
+function pickLeaveRoles(position, department) {
+  const deptKey = String(department || '').toUpperCase();
+  const deptRoles = LEAVE_ROLE_MAP[deptKey];
+  if (!deptRoles) return [];
+
+  switch (position) {
+    case 'assistant_director':
+    case 'deputy_director':
+      // Пингуются только Director + Dep.Director
+      return [DIRECTOR_ROLE, DEP_DIRECTOR_ROLE];
+
+    case 'head_of_dept':
+      // Пингуется только Curator отдела
+      return [deptRoles.curator];
+
+    case 'deputy_head':
+      // Пингуется Curator + Head отдела
+      return [deptRoles.curator, deptRoles.head];
+
+    case 'instructor':
+      // Пингуется High + Dep.Head отдела
+      return [deptRoles.high, deptRoles.depHead];
+
+    case 'rank_below_10':
+      // Пингуется только High отдела
+      return [deptRoles.high];
+
+    default:
+      return [];
+  }
+}
+
+const POSITION_LABELS = {
+  assistant_director: 'Assistant of Director',
+  deputy_director:    'Deputy of Director',
+  head_of_dept:       'Head of Department',
+  deputy_head:        'Deputy of Head Department',
+  instructor:         'Instructor',
+  rank_below_10:      'Сотрудник (ранг ниже 10)'
+};
 
 // ─────────────────────────────────────────────────────────────
 // 📡 Отправка в Discord с поддержкой форумных веток
@@ -306,11 +401,9 @@ export default async function handler(req, res) {
     webhookUrl = FORUM_LEAVE_WEBHOOK;
     leaveThreadId = LEAVE_THREADS[leaveType] || LEAVE_THREADS.IC;
 
-    const deptKey = String(department || '').toUpperCase();
-    const deptRoles = LEAVE_ROLES[deptKey] || [];
-
-    // Только роли выбранного отдела, без базовых тегов
-    roleMentions = deptRoles.map(id => `<@&${id}>`).join(' ');
+    const position = formData.position || '';
+    const pickedRoles = pickLeaveRoles(position, department);
+    roleMentions = pickedRoles.map(id => `<@&${id}>`).join(' ');
   } else if (type === 'promotion') {
     webhookUrl = webhooks.promotion;
     if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для повышения не настроен' });
@@ -617,6 +710,7 @@ function buildFields(type, department, targetDepartment, data, userId, username)
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       { name: '📋 Тип отпуска', value: data.leaveType === 'OOC' ? 'OOC Отпуск' : 'IC Отпуск', inline: false },
       { name: '🏢 Отдел', value: department || 'Не указан', inline: false },
+      { name: '🎖 Звание', value: POSITION_LABELS[data.position] || 'Не указано', inline: false },
       { name: '📝 Причина', value: data.reason || 'Не указана', inline: false },
       { name: '📅 Начало', value: data.startDate || 'Не указано', inline: false },
       { name: '📅 Конец', value: data.endDate || 'Не указано', inline: false },
