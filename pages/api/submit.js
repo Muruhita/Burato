@@ -68,11 +68,11 @@ const EMBED_IMAGE_HOSTS = [
 // ─────────────────────────────────────────────────────────────
 // 🧵 Форум отпусков — вебхук + ID веток
 // ─────────────────────────────────────────────────────────────
-const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1544351477844418570/9Zd10538AS31Wrtsfy1G312En-qZnvDEKYBJz19WIqdHpWO48MlhMx_xVeA0kLF2tdJ1';
+const FORUM_LEAVE_WEBHOOK = 'https://discord.com/api/webhooks/1554629063606403163/TBJAaaXvcN5n4Mjg7tnn7-zy-C1-lp0TV5uoMi199A5o8f9YLdq3-6rg5WQioH3sYUK5';
 
 const LEAVE_THREADS = {
-  IC:  '1479695882302787624',
-  OOC: '1479656377994580060'
+  IC:  '1554628745430695976',
+  OOC: '1554628906697498695'
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ const LEAVE_ROLES = {
   FA:  ['1520684374243147908', '1520681669173186631', '1520680932062007326', '1398200891353468928'],
   HRT: ['1520684348955689121', '1520681663460544633', '1520680902533845053', '1398201557635567636'],
   ATF: ['1520684344086237215', '1520681675774890004', '1520680905671184436', '1398201048598057041'],
-  AF:  ['1520681681366028361', '1520680937900474408', '1398200952602755103', '1520684363497603192'],
+  AF:  ['1520684363497603192', '1520681681366028361', '1520680937900474408', '1398200952602755103'],
   OCU: ['1520684354286784622', '1520681678706704394', '1520680921928437810', '1418771091291115631'],
   DEA: ['1520684367188328468', '1520681684603895880', '1520680926278058125', '1398201115379761283'],
   FNA: ['1520684351560487093', '1520681672499003533', '1520680960134221944', '1385530645186613311'],
@@ -311,7 +311,6 @@ export default async function handler(req, res) {
 
     // Только роли выбранного отдела, без базовых тегов
     roleMentions = deptRoles.map(id => `<@&${id}>`).join(' ');
-}
   } else if (type === 'promotion') {
     webhookUrl = webhooks.promotion;
     if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для повышения не настроен' });
@@ -614,27 +613,15 @@ function buildFields(type, department, targetDepartment, data, userId, username)
   }
 
   if (type === 'leave') {
-    const fields = [
+    return [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       { name: '📋 Тип отпуска', value: data.leaveType === 'OOC' ? 'OOC Отпуск' : 'IC Отпуск', inline: false },
       { name: '🏢 Отдел', value: department || 'Не указан', inline: false },
       { name: '📝 Причина', value: data.reason || 'Не указана', inline: false },
       { name: '📅 Начало', value: data.startDate || 'Не указано', inline: false },
-      { name: '📅 Конец', value: data.endDate || 'Не указано', inline: false }
+      { name: '📅 Конец', value: data.endDate || 'Не указано', inline: false },
+      ...baseFields
     ];
-
-    if (Array.isArray(data.screenshots) && data.screenshots.length) {
-      fields.push({
-        name: `📸 Скриншоты (${data.screenshots.length})`,
-        value: data.screenshots.join('\n'),
-        inline: false
-      });
-    } else if (data.screenshot && !data.screenshot.startsWith('https://i.ibb.co/')) {
-      fields.push({ name: '🖼️ Скриншот', value: data.screenshot, inline: false });
-    }
-
-    fields.push(...baseFields);
-    return fields;
   }
 
   if (type === 'promotion') {
@@ -671,7 +658,7 @@ function buildFields(type, department, targetDepartment, data, userId, username)
       ...baseFields
     ];
   }
-  
+
   if (type === 'exam') {
     const examTypeMap = {
       'oral': '🗣 Устный',
