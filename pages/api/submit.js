@@ -52,7 +52,10 @@ const webhooks = {
   withdrawal: process.env.WEBHOOK_WITHDRAWAL,
   hiring: process.env.WEBHOOK_HIRING,
   claim: process.env.WEBHOOK_CLAIMFIB,
-  testlik: process.env.TESTLIK_WEBHOOK
+  testlik: process.env.TESTLIK_WEBHOOK,
+  db: process.env.WEBHOOK_DB,
+  exam: process.env.WEBHOOK_EXAM,
+  ukmb: process.env.WEBHOOK_UKMB
 };
 
 const EMBED_IMAGE_HOSTS = [
@@ -87,6 +90,16 @@ const LEAVE_ROLES = {
   FNA: ['1520684351560487093', '1520681672499003533', '1520680960134221944', '1385530645186613311'],
   NSB: ['1520684346531512422', '1520681687728525342', '1520680911539273799', '1398201167154122752'],
 };
+
+// ─────────────────────────────────────────────────────────────
+// 🎓 Роли для форм ДБ, Экзамен, УКМБ
+// ─────────────────────────────────────────────────────────────
+const HIGH_STAFF_ROLE = '1274110499356934211';
+const FNA_ROLE = '1274110499356934207';
+const UKMB_ROLES = [
+  '1274110499377778755', // Director — проверь ID
+  '1274110499377778756'  // Dep.Director — проверь ID
+];
 
 // ─────────────────────────────────────────────────────────────
 // 📡 Отправка в Discord с поддержкой форумных веток
@@ -187,7 +200,6 @@ export default async function handler(req, res) {
 
   const { type, department, targetDepartment, leaveType, ...rawFormData } = req.body;
   const formData = sanitizeObject(rawFormData, 1000);
-  // Возвращаем leaveType — нужен в buildFields
   if (leaveType) formData.leaveType = leaveType;
 
   const userId = user.id;
@@ -210,7 +222,7 @@ export default async function handler(req, res) {
   }
 
   // ─────────────────────────────────────────────────
-  // 🔒 Слой 2: Google Safe Browsing — только для URL вне whitelist
+  // 🔒 Слой 2: Google Safe Browsing
   // ─────────────────────────────────────────────────
   const allText = Object.values(formData).filter(v => typeof v === 'string').join(' ');
   const allUrls = extractUrls(allText);
@@ -328,6 +340,18 @@ export default async function handler(req, res) {
     const deptInfo = DEPARTMENTS[targetDepartment];
     if (deptInfo && deptInfo.roleId) roleMentions += `<@&${deptInfo.roleId}> `;
     if (deptInfo && deptInfo.roleId2) roleMentions += `<@&${deptInfo.roleId2}>`;
+  } else if (type === 'db') {
+    webhookUrl = webhooks.db;
+    if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для ДБ не настроен (WEBHOOK_DB)' });
+    roleMentions = `<@&${HIGH_STAFF_ROLE}>`;
+  } else if (type === 'exam') {
+    webhookUrl = webhooks.exam;
+    if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для экзамена не настроен (WEBHOOK_EXAM)' });
+    roleMentions = `<@&${FNA_ROLE}>`;
+  } else if (type === 'ukmb') {
+    webhookUrl = webhooks.ukmb;
+    if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для УКМБ не настроен (WEBHOOK_UKMB)' });
+    roleMentions = UKMB_ROLES.map(id => `<@&${id}>`).join(' ');
   } else {
     webhookUrl = webhooks.promotion;
     roleMentions = '<@&1274110499356934211>';
@@ -416,6 +440,9 @@ function getFormTitle(type, department, targetDepartment) {
   if (type === 'transferToFib') return '🏛️ Перевод в FIB';
   if (type === 'weaponRequest') return '🔫 Спец Вооружение';
   if (type === 'leave') return '🌴 Отпуск';
+  if (type === 'db') return '📅 Запрос на ДБ';
+  if (type === 'exam') return '📝 Запрос на экзамен';
+  if (type === 'ukmb') return '🎓 Запрос на УКМБ';
   if (type === 'report') return `📋 Отчёт на повышение • ${DEPARTMENTS[department]?.name || ''}`;
   if (type === 'transfer') return `🔀 Перевод в ${DEPARTMENTS[targetDepartment]?.name || targetDepartment || ''}`;
   if (type === 'highrank') return '⚜️ Хай ранг отчет на повышении';
@@ -437,7 +464,10 @@ function getFormColor(type) {
     'transfer': 0x121978,
     'report': 0x0EAB93,
     'highrank': 0x8907B8,
-    'resignation': 0xDC3545
+    'resignation': 0xDC3545,
+    'db': 0x808080,
+    'exam': 0x00BFFF,
+    'ukmb': 0xFFD700
   };
   return colors[type] || 0x5865F2;
 }
@@ -630,6 +660,35 @@ function buildFields(type, department, targetDepartment, data, userId, username)
     return [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       { name: '📸 Скриншот профиля в планшете', value: data.screenshot || 'Не указано', inline: false },
+      ...baseFields
+    ];
+  }
+
+  if (type === 'db') {
+    return [
+      { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
+      { name: '📊 С какого - на какой ранг', value: data.rankRange || 'Не указано', inline: false },
+      ...baseFields
+    ];
+  }
+
+  if (type === 'exam') {
+    const examTypeMap = {
+      'oral': '🗣 Устный',
+      'practical': '⚔️ Практический',
+      'both': '🗣⚔️ Устный + Практический'
+    };
+    return [
+      { name: '👤 Отправитель', value: `<@${userId}>`, inline: false },
+      { name: '📝 Тип экзамена', value: examTypeMap[data.examType] || data.examType || 'Не указан', inline: false },
+      { name: '🕐 Удобное время', value: data.whenAvailable || 'Не указано', inline: false },
+      { name: '🆔 Discord ID', value: userId, inline: true }
+    ];
+  }
+
+  if (type === 'ukmb') {
+    return [
+      { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       ...baseFields
     ];
   }
