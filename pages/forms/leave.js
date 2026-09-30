@@ -4,12 +4,22 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 
+const POSITIONS = [
+  { value: 'assistant_director', label: 'Assistant of Director' },
+  { value: 'deputy_director',    label: 'Deputy of Director' },
+  { value: 'head_of_dept',       label: 'Head of Department' },
+  { value: 'deputy_head',        label: 'Deputy of Head Department' },
+  { value: 'instructor',         label: 'Instructor' },
+  { value: 'rank_below_10',      label: 'Сотрудник (ранг ниже 10)' }
+];
+
 export default function LeaveForm() {
   const router = useRouter();
   const [nickname, setNickname] = useState('');
   const [leaveType, setLeaveType] = useState('IC');
   const [formData, setFormData] = useState({
     department: '',
+    position: '',
     reason: '',
     startDate: '',
     endDate: ''
@@ -80,7 +90,7 @@ export default function LeaveForm() {
             <div className="fh-stamp">FORM-012 · PERSONNEL</div>
             <h1 className="fh-title">Отпуск</h1>
             <p className="fh-sub">
-              Заявка на IC или OOC отпуск. Укажите период и причину.
+              Заявка на IC или OOC отпуск. Укажите период, отдел и звание.
             </p>
             <div className="fh-rule" />
           </header>
@@ -128,6 +138,21 @@ export default function LeaveForm() {
               >
                 <option value="">-- ВЫБЕРИТЕ ОТДЕЛ --</option>
                 {departments.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+
+            <div className="field-block">
+              <label className="lbl">Звание</label>
+              <select
+                className="field"
+                value={formData.position}
+                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                required
+              >
+                <option value="">-- ВЫБЕРИТЕ ЗВАНИЕ --</option>
+                {POSITIONS.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
               </select>
             </div>
 
