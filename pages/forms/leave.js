@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
-import MultiImageUploader from '../../components/MultiImageUploader';
 
 export default function LeaveForm() {
   const router = useRouter();
@@ -13,8 +12,7 @@ export default function LeaveForm() {
     department: '',
     reason: '',
     startDate: '',
-    endDate: '',
-    screenshots: []
+    endDate: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -82,7 +80,7 @@ export default function LeaveForm() {
             <div className="fh-stamp">FORM-012 · PERSONNEL</div>
             <h1 className="fh-title">Отпуск</h1>
             <p className="fh-sub">
-              Заявка на IC или OOC отпуск. Укажите период и, при необходимости, приложите скриншоты.
+              Заявка на IC или OOC отпуск. Укажите период и причину.
             </p>
             <div className="fh-rule" />
           </header>
@@ -170,13 +168,6 @@ export default function LeaveForm() {
               </div>
             </div>
 
-            <MultiImageUploader
-              label="Скриншоты (необязательно)"
-              value={formData.screenshots}
-              onChange={(urls) => setFormData(prev => ({ ...prev, screenshots: urls }))}
-              max={5}
-            />
-
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
               {submitting
                 ? <><span className="btn-spinner" /> ОТПРАВКА...</>
@@ -214,9 +205,7 @@ export default function LeaveForm() {
         .type-switch button:first-child {
           border-right: 1px solid #262626;
         }
-        .type-switch button:hover {
-          color: #fff;
-        }
+        .type-switch button:hover { color: #fff; }
         .type-switch button.active {
           background: #fff;
           color: #000;
