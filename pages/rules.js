@@ -19,7 +19,7 @@ export default function Rules() {
 
     fetch('/api/me')
       .then(res => res.json())
-      .then(data => setIsAdmin(data.user && ADMIN_IDS.includes(data.user.id)));
+       .then(data => setIsAdmin(!!data.isAdmin));
   }, []);
 
   const saveContent = async () => {
