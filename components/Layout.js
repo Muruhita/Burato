@@ -14,7 +14,7 @@ export default function Layout({ children }) {
       .then(data => {
         if (!data.user) { router.push('/'); return; }
         setUser(data.user);
-        setIsAdmin(ADMIN_IDS.includes(data.user.id));
+        setIsAdmin(!!data.isAdmin);
       });
   }, []);
 
