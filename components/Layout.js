@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { ADMIN_IDS } from '../lib/admins';
+// import { ADMIN_IDS } from '../lib/admins';
 
 export default function Layout({ children }) {
   const router = useRouter();
