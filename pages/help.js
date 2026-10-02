@@ -1,6 +1,5 @@
 import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
-import { ADMIN_IDS } from '../lib/admins';
 
 export default function Help() {
   const [content, setContent] = useState('ЗАГРУЗКА...');
@@ -19,7 +18,7 @@ export default function Help() {
 
     fetch('/api/me')
       .then(res => res.json())
-      .then(data => setIsAdmin(data.user && ADMIN_IDS.includes(data.user.id)));
+      .then(data => setIsAdmin(!!data.isAdmin));   // ← флаг с сервера
   }, []);
 
   const saveContent = async () => {
