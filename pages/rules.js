@@ -1,6 +1,6 @@
 import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
-import { ADMIN_IDS } from '../lib/admins';
+// import { ADMIN_IDS } from '../lib/admins';
 
 export default function Rules() {
   const [content, setContent] = useState('ЗАГРУЗКА...');
