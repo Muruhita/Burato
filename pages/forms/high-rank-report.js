@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
-import { ADMIN_IDS } from '../../lib/admins';
+// import { ADMIN_IDS } from '../../lib/admins';
 
 const RANK_OPTIONS = [
   '1-2 ранг', '2-3 ранг', '3-4 ранг', '4-5 ранг', '5-6 ранг',
@@ -37,7 +37,7 @@ export default function HighRankReportForm() {
     ]).then(([meData, profileData, conditionsData]) => {
       if (!meData.user) { router.push('/'); return; }
       setUser(meData.user);
-      setIsAdmin(ADMIN_IDS.includes(meData.user.id));
+      setIsAdmin(!!meData.isAdmin);
       if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
       if (profileData.banned) {
         setBanned(true);
