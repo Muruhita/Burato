@@ -421,7 +421,7 @@ export default async function handler(req, res) {
   } else if (type === 'highrank') {
     webhookUrl = webhooks.highrank;
     if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для высоких рангов не настроен' });
-    roleMentions = '<@&1289343511354671125>';
+    roleMentions = '<@&1289343511354671125> <@&571605565881450506>';
   } else if (type === 'resignation') {
     webhookUrl = webhooks.resignation;
     if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для увольнений не настроен' });
