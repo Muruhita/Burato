@@ -101,7 +101,7 @@ export default function Layout({ children }) {
       {/* ░░ ПОДВАЛ ░░ */}
       <footer className="footer">
         <div className="footer-links">
-          <a href="/terms.html"   className="f-link">MINI-GAME</a>
+          <a href="/terms"   className="f-link">MINI-GAME</a>
           <span className="f-sep">/</span>
           <a href="/privacy" className="f-link">LINKS</a>
           <span className="f-sep">/</span>
