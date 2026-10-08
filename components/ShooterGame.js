@@ -26,6 +26,41 @@ export default function ShooterGame() {
     const pointInRect = (x, y, r) => x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h;
     const normAng = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
+    /* ═══════════════ СКИНЫ ═══════════════ */
+    const SKINS = [
+      {
+        id: 'recruit', name: 'RECRUIT', desc: 'Стандартная форма',
+        body: '#4fc3f7', gun: '#bfe9ff', accent: '#ffffff',
+        accessory: 'helmet', glowColor: null, hair: null, sparkles: false,
+      },
+      {
+        id: 'sakura', name: 'SAKURA', desc: 'Аниме-стиль ⭐',
+        body: '#ff88cc', gun: '#ffe4f5', accent: '#ff0055',
+        accessory: 'cat-ears', hair: 'twin-tails', hairColor: '#ff44aa',
+        glowColor: '#ff66cc', sparkles: true,
+      },
+      {
+        id: 'shadow', name: 'SHADOW', desc: 'Ниндзя-ассасин',
+        body: '#2a2a3a', gun: '#444466', accent: '#9d4edd',
+        accessory: 'ninja-hood', glowColor: '#9d4edd', hair: null, sparkles: false,
+      },
+      {
+        id: 'neon', name: 'NEON', desc: 'Кибер-бегун',
+        body: '#0affc7', gun: '#ffffff', accent: '#00ffff',
+        accessory: 'visor', glowColor: '#0affc7', hair: null, sparkles: false,
+      },
+      {
+        id: 'swat', name: 'SWAT', desc: 'Тактическая броня',
+        body: '#3a4a2a', gun: '#1a1a1a', accent: '#7ee787',
+        accessory: 'helmet-tactical', glowColor: null, hair: null, sparkles: false,
+      },
+      {
+        id: 'elite', name: 'ELITE', desc: 'Золотой отряд',
+        body: '#ffcc44', gun: '#ffaa00', accent: '#ffffff',
+        accessory: 'crown', glowColor: '#ffcc44', hair: null, sparkles: false,
+      },
+    ];
+
     /* ═══════════════ КОНСТАНТЫ ═══════════════ */
     const CLASSES = [
       { id: 'assault',    name: 'ШТУРМОВИК',  desc: '+30 HP, +15% скорость',    color: '#e35d5d' },
@@ -129,7 +164,7 @@ export default function ShooterGame() {
     let barrels, parts, drone, turrets, grenades;
     let cam, shake, state, score, enemyIdCounter;
     let powerupSpawnTimer, nukeEffect, screenFlash;
-    let menuParticles;
+    let menuParticles, menuSkinPreviewTime = 0;
     let hitStop = 0, chromaPulse = 0;
     let wave, waveState, waveTimer, spawnTimer, spawnedInWave, nextBossWave;
     let biomeIdx = 0;
@@ -137,8 +172,8 @@ export default function ShooterGame() {
     let pendingLevelUps = 0;
     let levelUpChoices = [];
     let levelUpButtons = [];
-    const menu = { weapon: 0, diff: 1, cls: 0, biome: 0 };
-    const menuButtons = { weapons: [], classes: [], difficulties: [], biomes: [], start: null };
+    const menu = { weapon: 0, diff: 1, cls: 0, biome: 0, skin: 0 };
+    const menuButtons = { weapons: [], classes: [], difficulties: [], biomes: [], skins: [], start: null };
     let gameOverButtons = { retry: null, menu: null };
     const mouse = { x: W / 2, y: H / 2, down: false, rdown: false };
     const keys = {};
@@ -386,7 +421,7 @@ export default function ShooterGame() {
     }
     function hexToRgb(hex) { const a = hexToRgbArr(hex); return a[0] + ',' + a[1] + ',' + a[2]; }
 
-    /* ═══════════════ ПЕРКИ / ГЕТТЕРЫ ═══════════════ */
+    /* ═══════════════ ПЕРКИ ═══════════════ */
     function getDamageMult() {
       return (player.buffs.damage > 0 ? 1.7 : 1)
            * (player.classId === 'sniper' ? 1.4 : 1)
@@ -403,9 +438,7 @@ export default function ShooterGame() {
       if (base === Infinity) return Infinity;
       return Math.floor(base * (1 + (player.perks.mag || 0) * 0.25));
     }
-    function getMagnetRadius() {
-      return 90 + (player.perks.magnet || 0) * 140;
-    }
+    function getMagnetRadius() { return 90 + (player.perks.magnet || 0) * 140; }
 
     function gainXP(amount) {
       player.xp += amount;
@@ -417,7 +450,6 @@ export default function ShooterGame() {
       }
       if (pendingLevelUps > 0 && state === 'play') openLevelUp();
     }
-
     function pickLevelUpChoices() {
       const avail = PERKS.filter((p) => (player.perks[p.id] || 0) < p.max);
       const pool = avail.slice();
@@ -428,43 +460,31 @@ export default function ShooterGame() {
       }
       return out;
     }
-
     function openLevelUp() {
       state = 'levelup';
       levelUpChoices = pickLevelUpChoices();
-      mouse.down = false;
-      mouse.rdown = false;
+      mouse.down = false; mouse.rdown = false;
       layoutLevelUpButtons();
     }
-
     function layoutLevelUpButtons() {
       levelUpButtons = [];
       const cardW = 260, cardH = 320, gap = 30;
       const totalW = 3 * cardW + 2 * gap;
       const startX = W / 2 - totalW / 2;
       const y = H / 2 - cardH / 2 + 30;
-      for (let i = 0; i < 3; i++) {
-        levelUpButtons.push({ x: startX + i * (cardW + gap), y, w: cardW, h: cardH, idx: i });
-      }
+      for (let i = 0; i < 3; i++) levelUpButtons.push({ x: startX + i * (cardW + gap), y, w: cardW, h: cardH, idx: i });
     }
-
     function applyPerk(id) {
       player.perks[id] = (player.perks[id] || 0) + 1;
-      if (id === 'hp') {
-        player.maxHp += 25;
-        player.hp = Math.min(player.maxHp, player.hp + 25);
-      } else if (id === 'speed') {
-        player.speed *= 1.10;
-      } else if (id === 'mag') {
+      if (id === 'hp') { player.maxHp += 25; player.hp = Math.min(player.maxHp, player.hp + 25); }
+      else if (id === 'speed') player.speed *= 1.10;
+      else if (id === 'mag') {
         const w = WEAPONS[menu.weapon];
-        if (!w.melee && player.reloading <= 0) {
-          player.ammo = Math.min(getMagSize(), player.ammo + Math.ceil(w.mag * 0.25));
-        }
+        if (!w.melee && player.reloading <= 0) player.ammo = Math.min(getMagSize(), player.ammo + Math.ceil(w.mag * 0.25));
       }
       addParticles(player.x, player.y, '#4fc3f7', 24, 340);
       screenFlash = { color: '79,195,247', alpha: 0.35, decay: 2 };
     }
-
     function choosePerk(i) {
       const card = levelUpButtons[i];
       if (!card) return;
@@ -472,12 +492,8 @@ export default function ShooterGame() {
       if (!choice) return;
       applyPerk(choice.id);
       pendingLevelUps--;
-      if (pendingLevelUps > 0) {
-        levelUpChoices = pickLevelUpChoices();
-        layoutLevelUpButtons();
-      } else {
-        state = 'play';
-      }
+      if (pendingLevelUps > 0) { levelUpChoices = pickLevelUpChoices(); layoutLevelUpButtons(); }
+      else state = 'play';
       updateCursor();
     }
 
@@ -608,6 +624,310 @@ export default function ShooterGame() {
       return c;
     }
 
+    /* ═══════════════ ДЕТАЛЬНАЯ ОТРИСОВКА ПЕРСОНАЖА ═══════════════ */
+    function drawCharacter(x, y, r, angle, cfg, opts) {
+      opts = opts || {};
+      const walkPhase = opts.walkPhase || 0;
+      const moving = !!opts.moving;
+      const flash = opts.flash || 0;
+      const isBoss = !!opts.isBoss;
+
+      const bob = moving ? Math.sin(walkPhase * 2) * 1.2 : Math.sin(performance.now() / 550) * 0.4;
+      const legSwing = moving ? Math.sin(walkPhase) * 0.45 : 0;
+
+      // ── aura / glow behind everything
+      if (cfg.glowColor && !flash) {
+        const glow = getGlow(cfg.glowColor, Math.ceil(r * 2.2));
+        ctx.globalAlpha = 0.4;
+        ctx.drawImage(glow, x - glow.width / 2, y + bob - glow.height / 2);
+        ctx.globalAlpha = 1;
+      }
+
+      // ── hair behind body
+      if (cfg.hair === 'twin-tails') {
+        ctx.save();
+        ctx.translate(x, y + bob);
+        ctx.rotate(angle);
+        const sway = Math.sin(walkPhase * 1.6) * 0.25;
+        for (const side of [-1, 1]) {
+          ctx.save();
+          ctx.rotate(side * (Math.PI * 0.55 + sway));
+          ctx.fillStyle = cfg.hairColor || '#ff44aa';
+          ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+          ctx.lineWidth = 1.5;
+          // hair tail as elongated teardrop
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(r * 0.7, -r * 0.5, r * 1.5, -r * 0.4);
+          ctx.quadraticCurveTo(r * 2.2, -r * 0.1, r * 1.9, r * 0.2);
+          ctx.quadraticCurveTo(r * 1.0, r * 0.15, 0, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // hair tie
+          ctx.fillStyle = cfg.accent || '#ffffff';
+          ctx.beginPath();
+          ctx.arc(r * 0.35, -r * 0.15, r * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(x, y + bob);
+      ctx.rotate(angle);
+
+      // ── shadow
+      ctx.beginPath(); ctx.arc(2, 3, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill();
+
+      // ── LEGS (two animated legs behind body)
+      const legColor = shade(cfg.body, 0.6);
+      for (const side of [-1, 1]) {
+        ctx.save();
+        ctx.translate(-r * 0.15, side * r * 0.5);
+        ctx.rotate(side * legSwing);
+        ctx.fillStyle = legColor;
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.55, 0, r * 0.55, r * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ── TORSO (perpendicular ellipse)
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.65, r * 1.0, 0, 0, Math.PI * 2);
+      ctx.fillStyle = flash > 0 ? '#ffffff' : cfg.body;
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(0,0,0,.55)';
+      ctx.stroke();
+
+      // chest plate / accent
+      if (cfg.accent) {
+        ctx.fillStyle = cfg.accent;
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath();
+        ctx.ellipse(r * 0.1, 0, r * 0.35, r * 0.65, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // shoulder pads
+      ctx.fillStyle = shade(cfg.body, 0.8);
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(-r * 0.15, side * r * 0.85, r * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // ── ARMS holding gun
+      ctx.fillStyle = cfg.body;
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1.5;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(r * 0.45, side * r * 0.6, r * 0.4, r * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // ── WEAPON
+      ctx.fillStyle = cfg.gun;
+      ctx.fillRect(r * 0.55, -4.5, 20, 9);
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.fillRect(r * 0.55, -4.5, 20, 3);
+      // magazine
+      ctx.fillStyle = shade(cfg.gun, 0.6);
+      ctx.fillRect(r * 0.6, 3, 6, 6);
+
+      // ── HEAD (top-down: circle over center)
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+      ctx.fillStyle = flash > 0 ? '#ffffff' : shade(cfg.body, 1.1);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0,0,0,.55)';
+      ctx.stroke();
+
+      // ── ACCESSORIES
+      drawAccessory(cfg, r, isBoss);
+
+      // ── skin-specific details
+      if (cfg.id === 'sakura') {
+        // big anime eyes on front of head
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(r * 0.4, -r * 0.28, r * 0.17, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(r * 0.4, r * 0.28, r * 0.17, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // iris
+        ctx.fillStyle = '#4a7fff';
+        ctx.beginPath();
+        ctx.arc(r * 0.46, -r * 0.28, r * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(r * 0.46, r * 0.28, r * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        // pupil
+        ctx.fillStyle = '#0a0a1a';
+        ctx.beginPath();
+        ctx.arc(r * 0.49, -r * 0.28, r * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(r * 0.49, r * 0.28, r * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        // sparkle
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(r * 0.44, -r * 0.34, r * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(r * 0.44, r * 0.22, r * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+        // blush
+        ctx.fillStyle = 'rgba(255,90,150,0.55)';
+        ctx.beginPath();
+        ctx.ellipse(r * 0.15, -r * 0.6, r * 0.16, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(r * 0.15, r * 0.6, r * 0.16, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function drawAccessory(cfg, r, isBoss) {
+      switch (cfg.accessory) {
+        case 'helmet': {
+          ctx.fillStyle = 'rgba(20,25,35,0.92)';
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.68, Math.PI * 0.05, Math.PI * 0.95, true);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          break;
+        }
+        case 'cat-ears': {
+          for (const side of [-1, 1]) {
+            // outer triangle
+            ctx.fillStyle = cfg.hairColor || '#ff44aa';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.15, side * r * 0.45);
+            ctx.lineTo(-r * 0.55, side * r * 1.15);
+            ctx.lineTo(r * 0.15, side * r * 0.85);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            // inner pink
+            ctx.fillStyle = '#ffb8dd';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.13, side * r * 0.55);
+            ctx.lineTo(-r * 0.42, side * r * 1.0);
+            ctx.lineTo(r * 0.05, side * r * 0.78);
+            ctx.closePath();
+            ctx.fill();
+          }
+          break;
+        }
+        case 'ninja-hood': {
+          ctx.fillStyle = '#1a1a26';
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // headband
+          ctx.fillStyle = cfg.accent || '#9d4edd';
+          ctx.fillRect(-2, -r * 0.75, 3, r * 1.5);
+          // eyes
+          ctx.fillStyle = '#ff3344';
+          ctx.beginPath();
+          ctx.arc(r * 0.4, -r * 0.3, 2, 0, Math.PI * 2);
+          ctx.arc(r * 0.4, r * 0.3, 2, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        }
+        case 'visor': {
+          ctx.fillStyle = cfg.accent || '#00ffff';
+          ctx.globalAlpha = 0.95;
+          ctx.fillRect(r * 0.25, -r * 0.65, 5, r * 1.3);
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#0a0a1a';
+          ctx.fillRect(r * 0.42, -r * 0.55, 2, r * 1.1);
+          break;
+        }
+        case 'helmet-tactical': {
+          ctx.fillStyle = '#252f1e';
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#3a4a2a';
+          ctx.beginPath();
+          ctx.arc(r * 0.1, 0, r * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+          // straps
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillRect(-r * 0.2, -r * 0.6, 3, r * 1.2);
+          ctx.fillRect(-r * 0.2, r * 0.3, 3, r * 0.3);
+          ctx.fillRect(-r * 0.2, -r * 0.6, 3, r * 0.3);
+          break;
+        }
+        case 'crown': {
+          ctx.fillStyle = '#ffcc44';
+          ctx.strokeStyle = '#aa7700';
+          ctx.lineWidth = 1.5;
+          for (let i = 0; i < 3; i++) {
+            const ang = -Math.PI * 0.42 + i * Math.PI * 0.42;
+            const px = Math.cos(ang) * r * 0.55;
+            const py = Math.sin(ang) * r * 0.55;
+            const px2 = Math.cos(ang) * r * 0.95;
+            const py2 = Math.sin(ang) * r * 0.95;
+            const px3 = Math.cos(ang + 0.32) * r * 0.7;
+            const py3 = Math.sin(ang + 0.32) * r * 0.7;
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(px2, py2);
+            ctx.lineTo(px3, py3);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            // gem
+            ctx.fillStyle = '#ff3355';
+            ctx.beginPath();
+            ctx.arc(px2, py2, r * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffcc44';
+          }
+          break;
+        }
+      }
+    }
+
+    function shade(hex, mult) {
+      const [r, g, b] = hexToRgbArr(hex);
+      const rr = clamp(Math.round(r * mult), 0, 255);
+      const gg = clamp(Math.round(g * mult), 0, 255);
+      const bb = clamp(Math.round(b * mult), 0, 255);
+      return `rgb(${rr},${gg},${bb})`;
+    }
+
     /* ═══════════════ ВРАГИ ═══════════════ */
     function makeEnemy(x, y, typeName, isBoss) {
       const t = isBoss ? BOSS_TYPE : ENEMY_TYPES[typeName];
@@ -624,6 +944,18 @@ export default function ShooterGame() {
         hitFlash: 0, slotAngle: slot, dmgMult: diff.dmg,
         isBoss: !!isBoss, phase: 1,
         healTimer: rand(0, 2), trailTimer: 0,
+        walkPhase: Math.random() * 10,
+        cfg: makeEnemyCfg(t, isBoss),
+      };
+    }
+
+    function makeEnemyCfg(t, isBoss) {
+      return {
+        body: t.bodyColor,
+        gun: t.gunColor,
+        accent: 'rgba(255,255,255,0.35)',
+        accessory: isBoss ? 'helmet-tactical' : (t.shield ? 'helmet-tactical' : 'helmet'),
+        hair: null, hairColor: null, glowColor: null,
       };
     }
 
@@ -784,7 +1116,8 @@ export default function ShooterGame() {
       }
 
       const ml = Math.hypot(mx, my);
-      if (ml > 0.001) { mx /= ml; my /= ml; }
+      const wasMoving = ml > 0.01;
+      if (wasMoving) { mx /= ml; my /= ml; }
 
       if (!t.flyer) {
         const la = e.r + 6;
@@ -803,6 +1136,9 @@ export default function ShooterGame() {
       e.x += mx * spd * dt;
       e.y += my * spd * dt;
       if (!t.flyer) resolveWalls(e);
+
+      // walk animation
+      e.walkPhase += dt * (wasMoving ? 8 : 2);
 
       const predX = player.x + player.vx * (dist / (t.bulletSpeed || 1)) * t.aimSkill;
       const predY = player.y + player.vy * (dist / (t.bulletSpeed || 1)) * t.aimSkill;
@@ -900,17 +1236,11 @@ export default function ShooterGame() {
       for (let i = 0; i < totalShots; i++) {
         const a = a0 + rand(-w.spread, w.spread);
         bullets.push({
-          x: player.x + Math.cos(a) * 20,
-          y: player.y + Math.sin(a) * 20,
-          vx: Math.cos(a) * w.speed,
-          vy: Math.sin(a) * w.speed,
-          dmg: w.damage * dmgMult,
-          friendly: true,
-          life: 2,
-          color: w.color,
-          radius: w.count > 1 ? 2.6 : 3.4,
-          pierce: pierceTotal,
-          hitIds: pierceTotal ? [] : null,
+          x: player.x + Math.cos(a) * 20, y: player.y + Math.sin(a) * 20,
+          vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed,
+          dmg: w.damage * dmgMult, friendly: true, life: 2,
+          color: w.color, radius: w.count > 1 ? 2.6 : 3.4,
+          pierce: pierceTotal, hitIds: pierceTotal ? [] : null,
         });
       }
       addParticles(player.x + Math.cos(a0) * 22, player.y + Math.sin(a0) * 22, w.color, w.count > 1 ? 10 : 4, 140);
@@ -932,7 +1262,7 @@ export default function ShooterGame() {
       const w = WEAPONS[menu.weapon];
       const hasDashPerk = (player.perks.dash || 0) > 0;
       if (!w.melee && !hasDashPerk) return;
-      if (player.dashCd > 0 || player.dashing) return;
+      if (player.dashCd > 0 || player.dashing > 0) return;
       const baseDist = w.melee ? w.dashDist : 200;
       const baseTime = w.melee ? w.dashTime : 0.18;
       const baseCd = w.melee ? w.dashCd : 1.5;
@@ -1051,15 +1381,11 @@ export default function ShooterGame() {
               if (edx * edx + edy * edy < e.r * e.r) {
                 damageEnemy(e, b.dmg, b.x - b.vx * 0.01, b.y - b.vy * 0.01, false);
                 if (b.hitIds) b.hitIds.push(e.id);
-
                 if (player.perks.vamp && Math.random() < 0.3 * player.perks.vamp) {
                   player.hp = Math.min(player.maxHp, player.hp + 2);
                   addDamageNumber(player.x, player.y - 30, 2, '#ff3355', false);
                 }
-                if (player.perks.explosive && Math.random() < 0.15 * player.perks.explosive) {
-                  explode(b.x, b.y, 90, 30, 'player', e);
-                }
-
+                if (player.perks.explosive && Math.random() < 0.15 * player.perks.explosive) explode(b.x, b.y, 90, 30, 'player', e);
                 addParticles(b.x, b.y, '#ff7b7b', 6, 200);
                 if (b.pierce > 0) { b.pierce--; b.dmg *= 0.75; }
                 else { dead = true; break; }
@@ -1150,12 +1476,10 @@ export default function ShooterGame() {
         if (p.life <= 0) { powerupsOnMap.splice(i, 1); continue; }
         const dx = p.x - player.x, dy = p.y - player.y;
         const d2 = dx * dx + dy * dy;
-        // magnet pull
         if (player.perks.magnet && d2 < magSq && d2 > 100) {
           const d = Math.sqrt(d2);
           const pull = 260 * dt;
-          p.x -= (dx / d) * pull;
-          p.y -= (dy / d) * pull;
+          p.x -= (dx / d) * pull; p.y -= (dy / d) * pull;
         }
         if (d2 < (player.r + p.r + 8) ** 2) { applyPowerup(p); powerupsOnMap.splice(i, 1); }
       }
@@ -1184,8 +1508,7 @@ export default function ShooterGame() {
         if (player.perks.magnet && d2 < magSq && d2 > 100) {
           const d = Math.sqrt(d2);
           const pull = 260 * dt;
-          p.x -= (dx / d) * pull;
-          p.y -= (dy / d) * pull;
+          p.x -= (dx / d) * pull; p.y -= (dy / d) * pull;
         }
         if (d2 < (player.r + p.r + 10) ** 2) {
           player.parts++;
@@ -1292,16 +1615,14 @@ export default function ShooterGame() {
       if (player.grenadeCd > 0) player.grenadeCd -= dt;
       if (player.turretCd > 0) player.turretCd -= dt;
 
-      /* regeneration from perks + medic */
       let regenRate = 0;
       if (player.perks.regen) regenRate += player.perks.regen * 1.5;
       if (player.classId === 'medic') regenRate += 3;
-      if (regenRate > 0 && player.hp > 0) {
-        player.hp = Math.min(player.maxHp, player.hp + regenRate * dt);
-      }
+      if (regenRate > 0 && player.hp > 0) player.hp = Math.min(player.maxHp, player.hp + regenRate * dt);
 
       if (player.dashing > 0) {
         player.dashing -= dt;
+        if (player.dashing < 0) player.dashing = 0;
         player.x += player.dashVx * dt;
         player.y += player.dashVy * dt;
         resolveWalls(player);
@@ -1314,6 +1635,7 @@ export default function ShooterGame() {
           }
         }
         addParticles(player.x, player.y, '#ff5577', 4, 100);
+        player.walkPhase += dt * 14;
       } else {
         let ix = 0, iy = 0;
         if (keys['KeyW'] || keys['ArrowUp']) iy -= 1;
@@ -1326,6 +1648,9 @@ export default function ShooterGame() {
           player.x += ix * player.speed * dt;
           player.y += iy * player.speed * dt;
           resolveWalls(player);
+          player.walkPhase += dt * 9;
+        } else {
+          player.walkPhase += dt * 1.5;
         }
         player.vx = ix * player.speed;
         player.vy = iy * player.speed;
@@ -1343,7 +1668,6 @@ export default function ShooterGame() {
       const w = WEAPONS[menu.weapon];
       const fireMult = getFireMult();
       const infinite = player.buffs.infinite > 0;
-      const magSize = getMagSize();
 
       if (!w.melee && !infinite && player.reloading <= 0 && player.ammo <= 0) startReload();
       if (mouse.down && player.cd <= 0 && player.reloading <= 0 && (w.melee || infinite || player.ammo > 0)) {
@@ -1352,6 +1676,20 @@ export default function ShooterGame() {
         shootPlayer();
       }
       if (mouse.rdown && w.melee && player.parrying <= 0) tryParry();
+
+      // anime sparkles
+      if (player.skinCfg && player.skinCfg.sparkles && Math.random() < 0.25) {
+        const ang = rand(0, Math.PI * 2);
+        const rad = rand(18, 34);
+        particles.push({
+          x: player.x + Math.cos(ang) * rad,
+          y: player.y + Math.sin(ang) * rad,
+          vx: rand(-8, 8), vy: rand(-30, -15),
+          life: 0.7, maxLife: 0.7,
+          color: Math.random() < 0.5 ? '#ff88cc' : '#ffffff',
+          size: rand(1.5, 2.8),
+        });
+      }
 
       flowTimer -= dt;
       const pCellX = Math.floor(player.x / GRID), pCellY = Math.floor(player.y / GRID);
@@ -1477,20 +1815,7 @@ export default function ShooterGame() {
       }
     }
 
-    /* ═══════════════ ОТРИСОВКА ═══════════════ */
-    function drawFighter(x, y, r, angle, bodyColor, gunColor, flash) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(angle);
-      ctx.beginPath(); ctx.arc(2, 3, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fill();
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fillStyle = flash > 0 ? '#ffffff' : bodyColor; ctx.fill();
-      ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.stroke();
-      ctx.fillStyle = gunColor; ctx.fillRect(r - 3, -4.5, 18, 9);
-      ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(r - 3, -4.5, 18, 3);
-      ctx.restore();
-    }
-
+    /* ═══════════════ ОТРИСОВКА ИГРЫ ═══════════════ */
     function drawPowerupIcon(type, x, y, s, color) {
       ctx.save(); ctx.translate(x, y);
       ctx.strokeStyle = color; ctx.fillStyle = color;
@@ -1640,6 +1965,7 @@ export default function ShooterGame() {
         ctx.beginPath(); ctx.arc(b.x, b.y, b.radius * 0.4, 0, Math.PI * 2); ctx.fill();
       }
 
+      // enemies
       for (const e of enemies) {
         if (e.x + 60 < cam.x || e.x - 60 > cam.x + W) continue;
         if (e.y + 60 < cam.y || e.y - 60 > cam.y + H) continue;
@@ -1649,7 +1975,7 @@ export default function ShooterGame() {
           ctx.drawImage(glow, e.x - glow.width / 2, e.y - glow.height / 2);
           ctx.globalAlpha = 1;
         }
-        drawFighter(e.x, e.y, e.r, e.angle, e.type.bodyColor, e.type.gunColor, e.hitFlash);
+        drawCharacter(e.x, e.y, e.r, e.angle, e.cfg, { walkPhase: e.walkPhase, moving: true, flash: e.hitFlash, isBoss: e.isBoss });
         if (e.type.shield) {
           ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle);
           ctx.strokeStyle = 'rgba(160,200,240,0.85)'; ctx.lineWidth = 4;
@@ -1667,6 +1993,7 @@ export default function ShooterGame() {
         }
       }
 
+      // player
       if (state === 'play' || state === 'over' || state === 'levelup') {
         if (player.dashing > 0) {
           ctx.globalAlpha = 0.4;
@@ -1674,7 +2001,7 @@ export default function ShooterGame() {
           ctx.drawImage(glow, player.x - glow.width / 2, player.y - glow.height / 2);
           ctx.globalAlpha = 1;
         }
-        drawFighter(player.x, player.y, player.r, player.angle, '#4fc3f7', '#bfe9ff', 0);
+        drawCharacter(player.x, player.y, player.r, player.angle, player.skinCfg, { walkPhase: player.walkPhase, moving: true, flash: 0, isPlayer: true });
 
         if (player.swingTime > 0 && WEAPONS[menu.weapon].melee) {
           const w = WEAPONS[menu.weapon];
@@ -1756,7 +2083,6 @@ export default function ShooterGame() {
       }
       ctx.globalAlpha = 1;
 
-      /* ── уменьшенное затемнение ── */
       const darkness = ctx.createRadialGradient(player.x, player.y, 80, player.x, player.y, 620);
       darkness.addColorStop(0, 'rgba(0,0,0,0)');
       darkness.addColorStop(0.5, 'rgba(0,0,0,0.15)');
@@ -1836,7 +2162,6 @@ export default function ShooterGame() {
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText('HP ' + Math.ceil(player.hp) + ' / ' + player.maxHp, 34, 39);
 
-      // XP bar
       const xpPct = player.xp / player.xpToNext;
       ctx.fillStyle = 'rgba(255,255,255,.10)'; ctx.fillRect(28, 52, 272, 8);
       ctx.fillStyle = '#4fc3f7'; ctx.fillRect(28, 52, 272 * Math.max(0, Math.min(1, xpPct)), 8);
@@ -1899,7 +2224,7 @@ export default function ShooterGame() {
         ctx.fillText('БЕСКОНЕЧНО', px + panelW / 2, py + 60);
       } else {
         ctx.fillStyle = '#ffffff'; ctx.font = 'bold 26px system-ui, sans-serif';
-        ctx.fillText(player.ammo + ' / ' + magSize, px + panelW / 2, py + 28);
+        ctx.fillText(player.ammo + ' / ' + getMagSize(), px + panelW / 2, py + 28);
         if (player.reloading > 0) {
           const rp = 1 - player.reloading / (w.reload * getReloadMult());
           ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(px + 30, py + 62, panelW - 60, 6);
@@ -1916,6 +2241,46 @@ export default function ShooterGame() {
       if (player.classId === 'engineer') ctx.fillText('F — турель (' + turrets.length + '/3)', 20, H - 24);
       else if (player.classId === 'demolition') ctx.fillText('G — граната (' + player.grenadesLeft + ')', 20, H - 24);
       else ctx.fillText('SHIFT — рывок (перк)', 20, H - 24);
+
+      // dash indicator
+      {
+        const ww = WEAPONS[menu.weapon];
+        const hasDash = ww.melee || (player.perks.dash || 0) > 0;
+        if (hasDash) {
+          const dashBaseCd = ww.melee ? ww.dashCd : 1.5;
+          const ready = player.dashCd <= 0;
+          const boxX = 20, boxY = H - 92, boxW = 132, boxH = 34;
+          ctx.fillStyle = ready ? 'rgba(85,255,136,0.15)' : 'rgba(10,14,20,0.75)';
+          ctx.fillRect(boxX, boxY, boxW, boxH);
+          ctx.strokeStyle = ready ? '#55ff88' : 'rgba(255,255,255,0.2)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2);
+          ctx.fillStyle = ready ? '#55ff88' : 'rgba(255,255,255,0.45)';
+          ctx.font = 'bold 20px system-ui, sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('⤢', boxX + 22, boxY + boxH / 2);
+          if (ready) {
+            ctx.fillStyle = '#55ff88';
+            ctx.font = 'bold 11px system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('SHIFT · РЫВОК', boxX + 42, boxY + boxH / 2 - 5);
+            ctx.fillStyle = 'rgba(85,255,136,0.7)';
+            ctx.font = 'bold 9px system-ui, sans-serif';
+            ctx.fillText('ГОТОВ', boxX + 42, boxY + boxH / 2 + 9);
+          } else {
+            const pct = 1 - player.dashCd / dashBaseCd;
+            ctx.fillStyle = 'rgba(255,255,255,0.75)';
+            ctx.font = 'bold 11px system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('ПЕРЕЗАРЯДКА', boxX + 42, boxY + boxH / 2 - 5);
+            const barX = boxX + 42, barY = boxY + boxH / 2 + 4, barW = boxW - 54, barH = 5;
+            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.fillStyle = '#55ff88';
+            ctx.fillRect(barX, barY, barW * pct, barH);
+          }
+        }
+      }
 
       ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
       if (player.parts > 0) {
@@ -1960,8 +2325,6 @@ export default function ShooterGame() {
     function drawLevelUp() {
       ctx.fillStyle = 'rgba(5,8,14,0.85)';
       ctx.fillRect(0, 0, W, H);
-
-      // anim bg
       const t = performance.now() / 1000;
       ctx.strokeStyle = `rgba(79,195,247,${0.05 + Math.sin(t * 2) * 0.02})`;
       ctx.lineWidth = 1;
@@ -1985,7 +2348,6 @@ export default function ShooterGame() {
         if (!choice) continue;
         const hov = pointInRect(hx, hy, card);
         const stacks = player.perks[choice.id] || 0;
-
         ctx.fillStyle = hov ? `rgba(${hexToRgb(choice.color)},0.18)` : 'rgba(10,14,20,0.9)';
         ctx.fillRect(card.x, card.y, card.w, card.h);
         ctx.save();
@@ -1993,8 +2355,6 @@ export default function ShooterGame() {
         ctx.strokeStyle = choice.color; ctx.lineWidth = hov ? 3 : 2;
         ctx.strokeRect(card.x + 1, card.y + 1, card.w - 2, card.h - 2);
         ctx.restore();
-
-        // icon
         ctx.save();
         ctx.shadowBlur = 20; ctx.shadowColor = choice.color;
         ctx.fillStyle = choice.color;
@@ -2002,24 +2362,16 @@ export default function ShooterGame() {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(choice.icon, card.x + card.w / 2, card.y + 80);
         ctx.restore();
-
-        // name
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 17px system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(choice.name, card.x + card.w / 2, card.y + 150);
-
-        // desc
         ctx.fillStyle = 'rgba(255,255,255,.7)';
         ctx.font = '13px system-ui, sans-serif';
         ctx.fillText(choice.desc, card.x + card.w / 2, card.y + 190);
-
-        // stacks
         ctx.fillStyle = 'rgba(255,255,255,.4)';
         ctx.font = 'bold 10px system-ui, sans-serif';
         ctx.fillText('УРОВЕНЬ ' + stacks + ' / ' + choice.max, card.x + card.w / 2, card.y + 230);
-
-        // stack pips
         const pipY = card.y + 260;
         const pipSize = 12, pipGap = 4;
         const totalW = choice.max * pipSize + (choice.max - 1) * pipGap;
@@ -2029,7 +2381,6 @@ export default function ShooterGame() {
           ctx.fillStyle = i < stacks ? choice.color : 'rgba(255,255,255,.12)';
           ctx.fillRect(px, pipY, pipSize, pipSize);
         }
-
         if (hov) {
           ctx.fillStyle = 'rgba(255,255,255,.75)';
           ctx.font = 'bold 11px system-ui, sans-serif';
@@ -2065,7 +2416,7 @@ export default function ShooterGame() {
         ctx.fillStyle = '#ff9c54';
         ctx.beginPath(); ctx.arc(ox + br.x * scale, oy + br.y * scale, 1.6, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.fillStyle = '#4fc3f7';
+      ctx.fillStyle = player.skinCfg ? player.skinCfg.body : '#4fc3f7';
       ctx.beginPath(); ctx.arc(ox + player.x * scale, oy + player.y * scale, 3.6, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.35)';
       ctx.strokeRect(ox + cam.x * scale, oy + cam.y * scale, W * scale, H * scale);
@@ -2095,21 +2446,21 @@ export default function ShooterGame() {
       ctx.save();
       ctx.shadowBlur = 30; ctx.shadowColor = '#e35d5d';
       ctx.fillStyle = '#e35d5d'; ctx.font = 'bold 62px system-ui, sans-serif';
-      ctx.fillText('ТЫ ПОГИБ', W / 2, H / 2 - 150);
+      ctx.fillText('ТЫ ПОГИБ', W / 2, H / 2 - 170);
       ctx.restore();
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '14px system-ui, sans-serif';
-      ctx.fillText('СЛОЖНОСТЬ: ' + DIFFICULTIES[menu.diff].name + '  •  КЛАСС: ' + CLASSES[menu.cls].name, W / 2, H / 2 - 100);
-      ctx.fillText('БИОМ: ' + BIOMES[menu.biome].name + '  •  ОРУЖИЕ: ' + WEAPONS[menu.weapon].name, W / 2, H / 2 - 76);
+      ctx.fillText('СКИН: ' + SKINS[menu.skin].name + '  •  КЛАСС: ' + CLASSES[menu.cls].name, W / 2, H / 2 - 120);
+      ctx.fillText('ОРУЖИЕ: ' + WEAPONS[menu.weapon].name + '  •  БИОМ: ' + BIOMES[menu.biome].name, W / 2, H / 2 - 96);
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px system-ui, sans-serif';
-      ctx.fillText('ОЧКИ: ' + score, W / 2, H / 2 - 20);
+      ctx.fillText('ОЧКИ: ' + score, W / 2, H / 2 - 40);
       ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = 'bold 20px system-ui, sans-serif';
-      ctx.fillText('ВОЛН ПРОЙДЕНО: ' + Math.max(0, wave - 1) + '  •  УРОВЕНЬ: ' + player.level, W / 2, H / 2 + 30);
+      ctx.fillText('ВОЛН ПРОЙДЕНО: ' + Math.max(0, wave - 1) + '  •  УРОВЕНЬ: ' + player.level, W / 2, H / 2 + 10);
       ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '16px system-ui, sans-serif';
-      ctx.fillText('Продержался: ' + gameTime.toFixed(1) + ' сек', W / 2, H / 2 + 62);
+      ctx.fillText('Продержался: ' + gameTime.toFixed(1) + ' сек', W / 2, H / 2 + 42);
 
       const bW = 260, bH = 60, gap = 24;
       const bx1 = W / 2 - bW - gap / 2, bx2 = W / 2 + gap / 2;
-      const by = H / 2 + 130;
+      const by = H / 2 + 110;
       const hov1 = pointInRect(mouse.x, mouse.y, { x: bx1, y: by, w: bW, h: bH });
       const hov2 = pointInRect(mouse.x, mouse.y, { x: bx2, y: by, w: bW, h: bH });
       ctx.fillStyle = hov1 ? 'rgba(79,195,247,.2)' : 'rgba(79,195,247,.08)';
@@ -2145,32 +2496,50 @@ export default function ShooterGame() {
 
     function layoutMenu() {
       const cx = W / 2;
-      const wW = 190, wH = 210, wGap = 14;
+      // weapons
+      const wW = 190, wH = 190, wGap = 14;
       const wTotal = 5 * wW + 4 * wGap;
       const wStart = cx - wTotal / 2;
-      const wY = 165;
+      const wY = 130;
       menuButtons.weapons = [];
       for (let i = 0; i < 5; i++) menuButtons.weapons.push({ x: wStart + i * (wW + wGap), y: wY, w: wW, h: wH });
-      const cW = 190, cH = 60, cGap = 14;
+      // skins
+      const sW = 88, sH = 100, sGap = 12;
+      const sTotal = 6 * sW + 5 * sGap;
+      const sStart = cx - sTotal / 2;
+      const sY = wY + wH + 18;
+      menuButtons.skins = [];
+      for (let i = 0; i < 6; i++) {
+        const item = { x: sStart + i * (sW + sGap), y: sY, w: sW, h: sH };
+        item.cx = item.x + sW / 2;
+        item.cy = item.y + 38;
+        item.r = 32;
+        menuButtons.skins.push(item);
+      }
+      // classes
+      const cW = 190, cH = 54, cGap = 14;
       const cTotal = 5 * cW + 4 * cGap;
       const cStart = cx - cTotal / 2;
-      const cY = wY + wH + 30;
+      const cY = sY + sH + 14;
       menuButtons.classes = [];
       for (let i = 0; i < 5; i++) menuButtons.classes.push({ x: cStart + i * (cW + cGap), y: cY, w: cW, h: cH });
-      const dW = 220, dH = 58, dGap = 18;
+      // difficulties
+      const dW = 220, dH = 52, dGap = 18;
       const dTotal = 3 * dW + 2 * dGap;
       const dStart = cx - dTotal / 2;
-      const dY = cY + cH + 26;
+      const dY = cY + cH + 14;
       menuButtons.difficulties = [];
       for (let i = 0; i < 3; i++) menuButtons.difficulties.push({ x: dStart + i * (dW + dGap), y: dY, w: dW, h: dH });
-      const bW = 190, bH = 54, bGap = 14;
+      // biomes
+      const bW = 190, bH = 48, bGap = 14;
       const bTotal = 4 * bW + 3 * bGap;
       const bStart = cx - bTotal / 2;
-      const bY = dY + dH + 22;
+      const bY = dY + dH + 14;
       menuButtons.biomes = [];
       for (let i = 0; i < 4; i++) menuButtons.biomes.push({ x: bStart + i * (bW + bGap), y: bY, w: bW, h: bH });
-      const sW = 340, sH = 66;
-      menuButtons.start = { x: cx - sW / 2, y: bY + bH + 20, w: sW, h: sH };
+      // start
+      const sW2 = 320, sH2 = 58;
+      menuButtons.start = { x: cx - sW2 / 2, y: bY + bH + 18, w: sW2, h: sH2 };
     }
 
     function drawMenu() {
@@ -2189,16 +2558,17 @@ export default function ShooterGame() {
 
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.save(); ctx.shadowBlur = 40; ctx.shadowColor = '#4fc3f7';
-      ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 62px system-ui, sans-serif';
-      ctx.fillText('АРЕНА', W / 2, 62);
+      ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 54px system-ui, sans-serif';
+      ctx.fillText('АРЕНА', W / 2, 52);
       ctx.restore();
-      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = 'bold 12px system-ui, sans-serif';
-      ctx.fillText('T O P - D O W N   S H O O T E R   ·   v 2.2', W / 2, 108);
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.fillText('T O P - D O W N   S H O O T E R   ·   v 3.0', W / 2, 92);
 
       const hx = mouse.x, hy = mouse.y;
 
-      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText('ОРУЖИЕ', menuButtons.weapons[0].x, menuButtons.weapons[0].y - 8);
+      // WEAPONS
+      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillText('ОРУЖИЕ', menuButtons.weapons[0].x, menuButtons.weapons[0].y - 6);
       for (let i = 0; i < 5; i++) {
         const r = menuButtons.weapons[i], w = WEAPONS[i];
         const sel = menu.weapon === i, hov = pointInRect(hx, hy, r);
@@ -2212,17 +2582,17 @@ export default function ShooterGame() {
           ctx.strokeStyle = hov ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.08)'; ctx.lineWidth = 1.5;
           ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
         }
-        ctx.save(); ctx.translate(r.x + r.w / 2, r.y + 45);
+        ctx.save(); ctx.translate(r.x + r.w / 2, r.y + 42);
         ctx.fillStyle = sel ? w.color : 'rgba(255,255,255,.7)';
-        if (w.melee) { ctx.rotate(-0.3); ctx.fillRect(-50, -2, 100, 4); ctx.fillRect(-60, -6, 14, 12); }
-        else { ctx.fillRect(-40, -5, 70, 10); ctx.fillRect(-42, -3, 6, 16); ctx.fillRect(20, -8, 12, 16); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-40, 0, 70, 5); }
+        if (w.melee) { ctx.rotate(-0.3); ctx.fillRect(-46, -2, 92, 4); ctx.fillRect(-56, -6, 12, 12); }
+        else { ctx.fillRect(-38, -5, 66, 10); ctx.fillRect(-40, -3, 6, 16); ctx.fillRect(18, -8, 12, 16); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-38, 0, 66, 5); }
         ctx.restore();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = sel ? w.color : '#fff'; ctx.font = 'bold 12px system-ui, sans-serif';
-        ctx.fillText(w.name, r.x + r.w / 2, r.y + 92);
+        ctx.fillText(w.name, r.x + r.w / 2, r.y + 88);
         ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = 'bold 9px system-ui, sans-serif';
-        ctx.fillText(w.tag, r.x + r.w / 2, r.y + 110);
-        const statY = r.y + 132;
+        ctx.fillText(w.tag, r.x + r.w / 2, r.y + 106);
+        const statY = r.y + 128;
         const statLabels = [['УРОН', w.stats.dmg], ['ТЕМП', w.stats.rate], ['МАГ', w.stats.mag]];
         for (let s = 0; s < 3; s++) {
           const sy = statY + s * 18;
@@ -2234,8 +2604,61 @@ export default function ShooterGame() {
         }
       }
 
-      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText('КЛАСС', menuButtons.classes[0].x, menuButtons.classes[0].y - 8);
+      // SKINS
+      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillText('СКИН', menuButtons.skins[0].x, menuButtons.skins[0].y - 6);
+      menuSkinPreviewTime += 0.016;
+      for (let i = 0; i < 6; i++) {
+        const item = menuButtons.skins[i];
+        const skin = SKINS[i];
+        const sel = menu.skin === i;
+        const hov = pointInRect(hx, hy, item);
+
+        // circle preview clip
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(item.cx, item.cy, item.r, 0, Math.PI * 2);
+        ctx.clip();
+        // bg
+        ctx.fillStyle = skin.id === 'sakura' ? 'rgba(60,20,40,0.9)' : 'rgba(10,14,22,0.9)';
+        ctx.fillRect(item.cx - item.r, item.cy - item.r, item.r * 2, item.r * 2);
+        // grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let gx = item.cx - item.r; gx <= item.cx + item.r; gx += 8) { ctx.moveTo(gx, item.cy - item.r); ctx.lineTo(gx, item.cy + item.r); }
+        for (let gy = item.cy - item.r; gy <= item.cy + item.r; gy += 8) { ctx.moveTo(item.cx - item.r, gy); ctx.lineTo(item.cx + item.r, gy); }
+        ctx.stroke();
+        // character preview
+        drawCharacter(item.cx - item.r * 0.25, item.cy + 4, 12, -Math.PI * 0.15, skin, {
+          walkPhase: menuSkinPreviewTime * 4,
+          moving: true,
+          flash: 0,
+        });
+        ctx.restore();
+
+        // border
+        ctx.beginPath();
+        ctx.arc(item.cx, item.cy, item.r, 0, Math.PI * 2);
+        ctx.strokeStyle = sel ? skin.body : hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = sel ? 3 : 1.5;
+        ctx.stroke();
+        if (sel) {
+          ctx.save(); ctx.shadowBlur = 16; ctx.shadowColor = skin.body;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // name
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = sel ? skin.body : '#fff';
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        ctx.fillText(skin.name, item.cx, item.y + item.h - 14);
+      }
+
+      // CLASSES
+      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillText('КЛАСС', menuButtons.classes[0].x, menuButtons.classes[0].y - 6);
       for (let i = 0; i < 5; i++) {
         const r = menuButtons.classes[i], c = CLASSES[i];
         const sel = menu.cls === i, hov = pointInRect(hx, hy, r);
@@ -2244,14 +2667,15 @@ export default function ShooterGame() {
         ctx.strokeStyle = sel ? c.color : hov ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.08)';
         ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = sel ? c.color : '#fff'; ctx.font = 'bold 12px system-ui, sans-serif';
-        ctx.fillText(c.name, r.x + r.w / 2, r.y + 20);
-        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '10px system-ui, sans-serif';
-        ctx.fillText(c.desc, r.x + r.w / 2, r.y + 42);
+        ctx.fillStyle = sel ? c.color : '#fff'; ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.fillText(c.name, r.x + r.w / 2, r.y + 18);
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '9px system-ui, sans-serif';
+        ctx.fillText(c.desc, r.x + r.w / 2, r.y + 38);
       }
 
-      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText('СЛОЖНОСТЬ', menuButtons.difficulties[0].x, menuButtons.difficulties[0].y - 8);
+      // DIFFICULTIES
+      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillText('СЛОЖНОСТЬ', menuButtons.difficulties[0].x, menuButtons.difficulties[0].y - 6);
       for (let i = 0; i < 3; i++) {
         const r = menuButtons.difficulties[i], d = DIFFICULTIES[i];
         const sel = menu.diff === i, hov = pointInRect(hx, hy, r);
@@ -2260,14 +2684,15 @@ export default function ShooterGame() {
         ctx.strokeStyle = sel ? d.color : hov ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.1)';
         ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = sel ? d.color : '#fff'; ctx.font = 'bold 18px system-ui, sans-serif';
-        ctx.fillText(d.name, r.x + r.w / 2, r.y + 18);
-        ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.font = '10px system-ui, sans-serif';
-        ctx.fillText(d.desc, r.x + r.w / 2, r.y + 40);
+        ctx.fillStyle = sel ? d.color : '#fff'; ctx.font = 'bold 16px system-ui, sans-serif';
+        ctx.fillText(d.name, r.x + r.w / 2, r.y + 16);
+        ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.font = '9px system-ui, sans-serif';
+        ctx.fillText(d.desc, r.x + r.w / 2, r.y + 38);
       }
 
-      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText('БИОМ', menuButtons.biomes[0].x, menuButtons.biomes[0].y - 8);
+      // BIOMES
+      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillText('БИОМ', menuButtons.biomes[0].x, menuButtons.biomes[0].y - 6);
       for (let i = 0; i < 4; i++) {
         const r = menuButtons.biomes[i], b = BIOMES[i];
         const sel = menu.biome === i, hov = pointInRect(hx, hy, r);
@@ -2275,13 +2700,14 @@ export default function ShooterGame() {
         ctx.fillRect(r.x, r.y, r.w, r.h);
         ctx.strokeStyle = sel ? b.accent : hov ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.1)';
         ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
-        ctx.fillStyle = b.wall; ctx.fillRect(r.x + 8, r.y + 8, 32, r.h - 16);
-        ctx.fillStyle = b.accent; ctx.fillRect(r.x + 10, r.y + 10, 4, r.h - 20);
+        ctx.fillStyle = b.wall; ctx.fillRect(r.x + 8, r.y + 8, 28, r.h - 16);
+        ctx.fillStyle = b.accent; ctx.fillRect(r.x + 10, r.y + 10, 3, r.h - 20);
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = sel ? b.accent : '#fff'; ctx.font = 'bold 12px system-ui, sans-serif';
-        ctx.fillText(b.name, r.x + 52, r.y + r.h / 2);
+        ctx.fillStyle = sel ? b.accent : '#fff'; ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.fillText(b.name, r.x + 46, r.y + r.h / 2);
       }
 
+      // START
       const br = menuButtons.start;
       const bhov = pointInRect(hx, hy, br);
       const pulse = 0.6 + Math.sin(t * 3) * 0.4;
@@ -2293,13 +2719,14 @@ export default function ShooterGame() {
       ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 3;
       ctx.strokeRect(br.x + 1.5, br.y + 1.5, br.w - 3, br.h - 3);
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 22px system-ui, sans-serif';
       ctx.fillText('НАЧАТЬ ИГРУ', br.x + br.w / 2, br.y + br.h / 2);
     }
 
     /* ═══════════════ УПРАВЛЕНИЕ ═══════════════ */
     function handleMenuClick(x, y) {
       for (let i = 0; i < 5; i++) if (pointInRect(x, y, menuButtons.weapons[i])) { menu.weapon = i; return; }
+      for (let i = 0; i < 6; i++) if (pointInRect(x, y, menuButtons.skins[i])) { menu.skin = i; return; }
       for (let i = 0; i < 5; i++) if (pointInRect(x, y, menuButtons.classes[i])) { menu.cls = i; return; }
       for (let i = 0; i < 3; i++) if (pointInRect(x, y, menuButtons.difficulties[i])) { menu.diff = i; return; }
       for (let i = 0; i < 4; i++) if (pointInRect(x, y, menuButtons.biomes[i])) { menu.biome = i; return; }
@@ -2317,6 +2744,7 @@ export default function ShooterGame() {
       let over = false;
       if (state === 'menu') {
         for (const r of menuButtons.weapons) if (pointInRect(mouse.x, mouse.y, r)) over = true;
+        for (const r of menuButtons.skins) if (pointInRect(mouse.x, mouse.y, r)) over = true;
         for (const r of menuButtons.classes) if (pointInRect(mouse.x, mouse.y, r)) over = true;
         for (const r of menuButtons.difficulties) if (pointInRect(mouse.x, mouse.y, r)) over = true;
         for (const r of menuButtons.biomes) if (pointInRect(mouse.x, mouse.y, r)) over = true;
@@ -2417,7 +2845,7 @@ export default function ShooterGame() {
       const fs = !!document.fullscreenElement;
       setIsFs(fs);
       if (fs) { const { w, h } = computeFsSize(); resizeCanvas(w, h); }
-      else { resizeCanvas(1100, 780); }
+      else resizeCanvas(1100, 780);
     }
     function onWinResize() {
       if (document.fullscreenElement) { const { w, h } = computeFsSize(); resizeCanvas(w, h); }
@@ -2425,7 +2853,7 @@ export default function ShooterGame() {
     document.addEventListener('fullscreenchange', onFsChange);
     window.addEventListener('resize', onWinResize);
 
-    /* ═══════════════ СТАРТ ═══════════════ */
+    /* ═══════════════ СТАРТ / СБРОС ═══════════════ */
     function startGame() {
       biomeIdx = menu.biome;
       generateMap();
@@ -2435,6 +2863,7 @@ export default function ShooterGame() {
 
       const w = WEAPONS[menu.weapon];
       const cls = CLASSES[menu.cls];
+      const skinCfg = SKINS[menu.skin];
 
       let hp = 100, speed = 255;
       if (cls.id === 'assault') { hp = 130; speed = 293; }
@@ -2442,8 +2871,7 @@ export default function ShooterGame() {
 
       player = {
         x: MAP_W / 2, y: MAP_H / 2, r: 14,
-        hp, maxHp: hp,
-        speed, angle: 0, cd: 0,
+        hp, maxHp: hp, speed, angle: 0, cd: 0,
         vx: 0, vy: 0,
         ammo: w.melee ? Infinity : w.mag,
         reloading: 0,
@@ -2455,12 +2883,14 @@ export default function ShooterGame() {
         dashing: 0, dashCd: 0, dashVx: 0, dashVy: 0, dashHitSet: new Set(),
         parrying: 0, parryCd: 0,
         invuln: 0, swingTime: 0,
+        walkPhase: 0,
         xp: 0, level: 1, xpToNext: 80,
         perks: {
           damage: 0, firerate: 0, dash: 0, regen: 0, mag: 0, reload: 0,
           multishot: 0, pierce: 0, vamp: 0, armor: 0, magnet: 0,
           explosive: 0, speed: 0, hp: 0,
         },
+        skinCfg: skinCfg,
       };
       enemies = [];
       bullets = [];
@@ -2516,8 +2946,10 @@ export default function ShooterGame() {
       classId: 'assault', parts: 0, grenadesLeft: 0, grenadeCd: 0, turretCd: 0,
       dashing: 0, dashCd: 0, dashVx: 0, dashVy: 0, dashHitSet: new Set(),
       parrying: 0, parryCd: 0, invuln: 0, swingTime: 0,
+      walkPhase: 0,
       xp: 0, level: 1, xpToNext: 80,
       perks: { damage: 0, firerate: 0, dash: 0, regen: 0, mag: 0, reload: 0, multishot: 0, pierce: 0, vamp: 0, armor: 0, magnet: 0, explosive: 0, speed: 0, hp: 0 },
+      skinCfg: SKINS[0],
     };
     enemies = []; bullets = []; particles = []; decals = []; damageNumbers = []; powerupsOnMap = [];
     barrels = []; parts = []; turrets = []; grenades = []; drone = null;
