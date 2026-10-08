@@ -5,6 +5,7 @@ import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 
 const DEPARTMENTS = [
+  { id: 'ib', name: 'IB (Intelligence Branch)' },
   { id: 'cid', name: 'CID (Criminal Investigation)' },
   { id: 'fa', name: 'FA (Free Agent)' },
   { id: 'hrt', name: 'HRT (Hostage Rescue)' },
@@ -16,6 +17,9 @@ const DEPARTMENTS = [
   { id: 'nsb', name: 'NSB (National Security)' },
   { id: 'trainee', name: 'Trainee (Стажёр)' }
 ];
+
+// 🎯 Отделы, в которые НЕЛЬЗЯ переводиться
+const FORBIDDEN_TARGETS = ['ib', 'trainee'];
 
 const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
@@ -188,7 +192,7 @@ export default function TransferForm() {
                 onChange={(e) => setFormData({ ...formData, targetDepartment: e.target.value })}
               >
                 <option value="">-- ВЫБЕРИТЕ ОТДЕЛ --</option>
-                {DEPARTMENTS.filter(d => d.id !== 'trainee').map(d => (
+                {DEPARTMENTS.filter(d => !FORBIDDEN_TARGETS.includes(d.id)).map(d => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
