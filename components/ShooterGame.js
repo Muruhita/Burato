@@ -1,14 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ShooterGame() {
   const canvasRef = useRef(null);
+  const shellRef = useRef(null);
+  const [isFs, setIsFs] = useState(false);
+
+  const toggleFullscreen = () => {
+    const el = shellRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.();
+    }
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const shell = shellRef.current;
+    if (!canvas || !shell) return;
     const ctx = canvas.getContext('2d', { alpha: false });
-    const W = canvas.width, H = canvas.height;
-    const MAP_W = 2600, MAP_H = 1900;
+    let W = canvas.width, H = canvas.height;
+    const MAP_W = 3400, MAP_H = 2500;
 
     /* ═══════════════ УТИЛИТЫ ═══════════════ */
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -18,11 +31,11 @@ export default function ShooterGame() {
 
     /* ═══════════════ КОНСТАНТЫ ═══════════════ */
     const CLASSES = [
-      { id: 'assault',    name: 'ШТУРМОВИК',  desc: '+30 HP, +15% скорость',            color: '#e35d5d' },
-      { id: 'engineer',   name: 'ИНЖЕНЕР',    desc: 'Турели клавишей F',                 color: '#7ee787' },
-      { id: 'medic',      name: 'МЕДИК',      desc: '+30 HP, регенерация 3/сек',         color: '#55ddff' },
-      { id: 'sniper',     name: 'СНАЙПЕР',    desc: '+40% урона, видит врагов',          color: '#c58fff' },
-      { id: 'demolition', name: 'ПОДРЫВНИК',  desc: 'Граната (G), +60% AoE',             color: '#ff9c54' },
+      { id: 'assault',    name: 'ШТУРМОВИК',  desc: '+30 HP, +15% скорость',    color: '#e35d5d' },
+      { id: 'engineer',   name: 'ИНЖЕНЕР',    desc: 'Турели клавишей F',        color: '#7ee787' },
+      { id: 'medic',      name: 'МЕДИК',      desc: '+30 HP, регенерация 3/сек', color: '#55ddff' },
+      { id: 'sniper',     name: 'СНАЙПЕР',    desc: '+40% урона, видит врагов',  color: '#c58fff' },
+      { id: 'demolition', name: 'ПОДРЫВНИК',  desc: 'Граната (G), +60% AoE',     color: '#ff9c54' },
     ];
 
     const BIOMES = [
@@ -92,7 +105,8 @@ export default function ShooterGame() {
       damage:   { name: 'УСИЛЕНИЕ УРОНА',   color: '#ffaa33', rgb: '255,170,51', duration: 12, icon: 'damage' },
       reload:   { name: 'БЫСТРАЯ ПЕРЕЗАРЯДКА', color: '#55ddff', rgb: '85,221,255', duration: 14, icon: 'reload' },
       infinite: { name: 'БЕСКОНЕЧНЫЕ ПАТРОНЫ', color: '#88ff88', rgb: '136,255,136', duration: 10, icon: 'infinite' },
-      nuke:     { name: 'ЯДЕРНАЯ БОМБА', color: '#ff0044', rgb: '255,0,68', duration: 0, icon: 'nuke', rare: true },
+      health:   { name: 'АПТЕЧКА',          color: '#ff3355', rgb: '255,51,85',  duration: 0,  icon: 'health', heal: 45 },
+      nuke:     { name: 'ЯДЕРНАЯ БОМБА',    color: '#ff0044', rgb: '255,0,68',   duration: 0,  icon: 'nuke', rare: true },
     };
 
     /* ═══════════════ СОСТОЯНИЕ ═══════════════ */
@@ -105,6 +119,7 @@ export default function ShooterGame() {
     let hitStop = 0, chromaPulse = 0;
     let wave, waveState, waveTimer, spawnTimer, spawnedInWave, bossWave, nextBossWave;
     let biomeIdx = 0;
+    let gameTime = 0;
     const menu = { weapon: 0, diff: 1, cls: 0, biome: 0 };
     const menuButtons = { weapons: [], classes: [], difficulties: [], biomes: [], start: null };
     let gameOverButtons = { retry: null, menu: null };
@@ -114,7 +129,7 @@ export default function ShooterGame() {
     /* ═══════════════ SPATIAL HASH ═══════════════ */
     const SH_CELL = 180;
     let shCols, shRows;
-    let shEnemies; // Array of arrays of enemy refs
+    let shEnemies;
     function rebuildSpatialHash() {
       shCols = Math.ceil(MAP_W / SH_CELL);
       shRows = Math.ceil(MAP_H / SH_CELL);
@@ -217,12 +232,8 @@ export default function ShooterGame() {
         const cx = gx * GRID + GRID / 2, cy = gy * GRID + GRID / 2;
         if (cx > MAP_W || cy > MAP_H || circleHitsWall(cx, cy, 18)) gridBlocked[gy * gridCols + gx] = 1;
       }
-      if (worker) {
-        worker.postMessage({ type: 'init', gridBlocked: gridBlocked, gridCols, gridRows, GRID });
-      } else {
-        flowDist = new Int16Array(gridCols * gridRows);
-        flowQueue = new Int32Array(gridCols * gridRows);
-      }
+      if (worker) worker.postMessage({ type: 'init', gridBlocked: gridBlocked, gridCols, gridRows, GRID });
+      else { flowDist = new Int16Array(gridCols * gridRows); flowQueue = new Int32Array(gridCols * gridRows); }
     }
 
     function inlineBFS(tx, ty) {
@@ -291,7 +302,6 @@ export default function ShooterGame() {
       }
       return false;
     }
-
     function resolveWalls(e) {
       for (let i = 0; i < walls.length; i++) {
         const w = walls[i];
@@ -311,7 +321,6 @@ export default function ShooterGame() {
         }
       }
     }
-
     function segRect(x1, y1, x2, y2, r) {
       const dx = x2 - x1, dy = y2 - y1;
       let t0 = 0, t1 = 1;
@@ -327,7 +336,6 @@ export default function ShooterGame() {
       }
       return true;
     }
-
     function hasLOS(x1, y1, x2, y2) {
       for (let i = 0; i < walls.length; i++) {
         const w = walls[i];
@@ -348,7 +356,6 @@ export default function ShooterGame() {
       }
       if (particles.length > 550) particles.splice(0, particles.length - 550);
     }
-
     function addDecal(x, y, r, color, kind) {
       const circles = [];
       const n = 2 + ((Math.random() * 3) | 0);
@@ -356,12 +363,10 @@ export default function ShooterGame() {
       decals.push({ x, y, circles, color, kind: kind || 'blood', life: kind === 'hole' ? 40 : 18, maxLife: kind === 'hole' ? 40 : 18 });
       if (decals.length > 100) decals.shift();
     }
-
     function addDamageNumber(x, y, amount, color, big) {
       if (damageNumbers.length > 30) damageNumbers.shift();
       damageNumbers.push({ x, y, vx: rand(-30, 30), vy: -70, text: Math.round(amount).toString(), color, life: 0.9, maxLife: 0.9, size: big ? 24 : 14 });
     }
-
     function hexToRgbArr(hex) {
       const h = hex.replace('#', '');
       const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
@@ -397,15 +402,15 @@ export default function ShooterGame() {
 
     function placeBarrels() {
       barrels = [];
-      for (let i = 0; i < 40; i++) {
-        const x = rand(120, MAP_W - 120), y = rand(120, MAP_H - 120);
+      for (let i = 0; i < 14; i++) {
+        const x = rand(150, MAP_W - 150), y = rand(150, MAP_H - 150);
         if (circleHitsWall(x, y, 26)) continue;
-        if (Math.hypot(x - MAP_W / 2, y - MAP_H / 2) < 200) continue;
+        if (Math.hypot(x - MAP_W / 2, y - MAP_H / 2) < 220) continue;
         barrels.push({ x, y, r: 16, hp: 30, exploded: false, wobble: 0 });
       }
     }
 
-    /* ═══════════════ ЗАПЕЧЁННАЯ КАРТА (биом) ═══════════════ */
+    /* ═══════════════ ЗАПЕЧЁННАЯ КАРТА ═══════════════ */
     function bakeStaticMap() {
       staticCanvas = document.createElement('canvas');
       staticCanvas.width = MAP_W;
@@ -415,7 +420,6 @@ export default function ShooterGame() {
 
       sc.fillStyle = bio.floor;
       sc.fillRect(0, 0, MAP_W, MAP_H);
-
       const vg = sc.createRadialGradient(MAP_W / 2, MAP_H / 2, Math.min(MAP_W, MAP_H) * 0.15, MAP_W / 2, MAP_H / 2, Math.max(MAP_W, MAP_H) * 0.7);
       vg.addColorStop(0, `rgba(${bio.fog},0.0)`);
       vg.addColorStop(1, `rgba(0,0,0,0.55)`);
@@ -433,7 +437,7 @@ export default function ShooterGame() {
       sc.putImageData(imgData, 0, 0);
 
       sc.globalAlpha = 0.22;
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 70; i++) {
         const x = Math.random() * MAP_W, y = Math.random() * MAP_H, r = rand(40, 160);
         const g = sc.createRadialGradient(x, y, 0, x, y, r);
         g.addColorStop(0, Math.random() < 0.7 ? 'rgba(0,0,0,0.5)' : `rgba(${hexToRgb(bio.accent)},0.15)`);
@@ -456,17 +460,11 @@ export default function ShooterGame() {
 
     function drawBiomeWall(sc, w, bio) {
       const x = w.x, y = w.y, ww = w.w, wh = w.h;
-      sc.fillStyle = 'rgba(0,0,0,0.45)';
-      sc.fillRect(x + 6, y + 8, ww, wh);
+      sc.fillStyle = 'rgba(0,0,0,0.45)'; sc.fillRect(x + 6, y + 8, ww, wh);
       const sh = sc.createLinearGradient(x, y + wh, x, y + wh + 14);
-      sh.addColorStop(0, 'rgba(0,0,0,0.35)');
-      sh.addColorStop(1, 'rgba(0,0,0,0)');
-      sc.fillStyle = sh;
-      sc.fillRect(x, y + wh, ww, 14);
-
-      sc.fillStyle = bio.wall;
-      sc.fillRect(x, y, ww, wh);
-
+      sh.addColorStop(0, 'rgba(0,0,0,0.35)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+      sc.fillStyle = sh; sc.fillRect(x, y + wh, ww, 14);
+      sc.fillStyle = bio.wall; sc.fillRect(x, y, ww, wh);
       const bh = 18, bw = 42;
       sc.save();
       sc.beginPath(); sc.rect(x, y, ww, wh); sc.clip();
@@ -479,25 +477,17 @@ export default function ShooterGame() {
           const v = 0.85 + Math.random() * 0.3;
           sc.fillStyle = `rgb(${(base[0] * v) | 0},${(base[1] * v) | 0},${(base[2] * v) | 0})`;
           sc.fillRect(bx + 1, by + 1, bw - 2, bh - 2);
-          sc.fillStyle = 'rgba(255,255,255,0.05)';
-          sc.fillRect(bx + 1, by + 1, bw - 2, 2);
-          sc.fillStyle = 'rgba(0,0,0,0.28)';
-          sc.fillRect(bx + 1, by + bh - 3, bw - 2, 2);
+          sc.fillStyle = 'rgba(255,255,255,0.05)'; sc.fillRect(bx + 1, by + 1, bw - 2, 2);
+          sc.fillStyle = 'rgba(0,0,0,0.28)'; sc.fillRect(bx + 1, by + bh - 3, bw - 2, 2);
         }
       }
       const ao = sc.createLinearGradient(x, y, x, y + wh);
-      ao.addColorStop(0, 'rgba(0,0,0,0)');
-      ao.addColorStop(0.85, 'rgba(0,0,0,0)');
-      ao.addColorStop(1, 'rgba(0,0,0,0.35)');
-      sc.fillStyle = ao;
-      sc.fillRect(x, y, ww, wh);
+      ao.addColorStop(0, 'rgba(0,0,0,0)'); ao.addColorStop(0.85, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,0.35)');
+      sc.fillStyle = ao; sc.fillRect(x, y, ww, wh);
       sc.restore();
-      sc.fillStyle = 'rgba(255,255,255,0.10)';
-      sc.fillRect(x, y, ww, 3);
-      sc.fillStyle = 'rgba(255,255,255,0.05)';
-      sc.fillRect(x, y + 3, ww, 2);
-      sc.strokeStyle = 'rgba(0,0,0,0.55)';
-      sc.lineWidth = 2;
+      sc.fillStyle = 'rgba(255,255,255,0.10)'; sc.fillRect(x, y, ww, 3);
+      sc.fillStyle = 'rgba(255,255,255,0.05)'; sc.fillRect(x, y + 3, ww, 2);
+      sc.strokeStyle = 'rgba(0,0,0,0.55)'; sc.lineWidth = 2;
       sc.strokeRect(x + 1, y + 1, ww - 2, wh - 2);
     }
 
@@ -556,7 +546,7 @@ export default function ShooterGame() {
     function spawnEnemy() {
       for (let i = 0; i < 300; i++) {
         const x = rand(80, MAP_W - 80), y = rand(80, MAP_H - 80);
-        if (Math.hypot(x - player.x, y - player.y) < 540) continue;
+        if (Math.hypot(x - player.x, y - player.y) < 620) continue;
         if (circleHitsWall(x, y, 28)) continue;
         enemies.push(makeEnemy(x, y, pickEnemyType()));
         return true;
@@ -567,7 +557,7 @@ export default function ShooterGame() {
     function spawnBoss() {
       for (let i = 0; i < 400; i++) {
         const x = rand(200, MAP_W - 200), y = rand(200, MAP_H - 200);
-        if (Math.hypot(x - player.x, y - player.y) < 800) continue;
+        if (Math.hypot(x - player.x, y - player.y) < 900) continue;
         if (circleHitsWall(x, y, 40)) continue;
         enemies.push(makeEnemy(x, y, 'boss', true));
         return true;
@@ -615,7 +605,6 @@ export default function ShooterGame() {
       e.strafeTimer -= dt;
       if (e.strafeTimer <= 0) { e.strafe *= -1; e.strafeTimer = rand(0.7, 2.2); }
 
-      // boss phases
       if (e.isBoss) {
         const hpR = e.hp / e.maxHp;
         const newPhase = hpR > 0.6 ? 1 : hpR > 0.3 ? 2 : 3;
@@ -627,7 +616,6 @@ export default function ShooterGame() {
         }
       }
 
-      // healer
       if (t.healer) {
         e.healTimer -= dt;
         if (e.healTimer <= 0) {
@@ -642,14 +630,12 @@ export default function ShooterGame() {
         }
       }
 
-      // kamikaze: contact explode
       if (t.kamikaze && dist < e.r + player.r + 4) {
         explode(e.x, e.y, t.explodeRadius, t.explodeDamage * e.dmgMult, 'enemy', e);
         e.hp = 0;
         return;
       }
 
-      // blood trail
       const hpR = e.hp / e.maxHp;
       if (hpR < 0.5 && hpR > 0 && !e.isBoss) {
         e.trailTimer -= dt;
@@ -685,7 +671,6 @@ export default function ShooterGame() {
         else { mx = dx / dist; my = dy / dist; }
       }
 
-      // flyer: ignore wall collision
       if (!t.flyer) {
         for (let i = 0; i < bullets.length; i++) {
           const b = bullets[i];
@@ -721,7 +706,6 @@ export default function ShooterGame() {
         }
       }
 
-      // boss speed multiplier by phase
       const spd = e.isBoss ? e.speed * (e.phase === 3 ? 1.5 : e.phase === 2 ? 1.2 : 1) : e.speed;
       e.x += mx * spd * dt;
       e.y += my * spd * dt;
@@ -733,7 +717,6 @@ export default function ShooterGame() {
 
       e.cd -= dt;
 
-      // attack logic per type
       if (t.kamikaze) return;
       if (t.bomber) {
         if (los && dist < t.shootRange && e.cd <= 0) { e.cd = rand(t.cd[0], t.cd[1]); throwGrenade(e); }
@@ -876,6 +859,7 @@ export default function ShooterGame() {
 
     /* ═══════════════ ПУЛИ ═══════════════ */
     function updateBullets(dt) {
+      const w0 = WEAPONS[menu.weapon];
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
         b.life -= dt;
@@ -888,14 +872,33 @@ export default function ShooterGame() {
           b.y += (b.vy * dt) / steps;
           if (b.x < 0 || b.y < 0 || b.x > MAP_W || b.y > MAP_H) { dead = true; break; }
 
-          // parry reflect
-          if (!b.friendly && player.parrying > 0 && WEAPONS[menu.weapon].melee) {
-            const w = WEAPONS[menu.weapon];
+          // ── Katana LMB swing deflection ──
+          if (!b.friendly && player.swingTime > 0 && w0.melee) {
             const dx = b.x - player.x, dy = b.y - player.y;
             const d = Math.hypot(dx, dy);
-            if (d < w.reflectRange) {
+            if (d < w0.range + 12) {
               const a = Math.atan2(dy, dx);
-              if (Math.abs(normAng(a - player.angle)) < w.reflectArc / 2) {
+              if (Math.abs(normAng(a - player.angle)) < w0.arc / 2) {
+                b.friendly = true;
+                b.vx = -b.vx * 1.15;
+                b.vy = -b.vy * 1.15;
+                b.color = '#ff5577';
+                b.dmg *= 1.25;
+                b.hitIds = [];
+                addParticles(b.x, b.y, '#ff5577', 8, 240);
+                chromaPulse = 0.5;
+                continue;
+              }
+            }
+          }
+
+          // ── Katana RMB parry deflection ──
+          if (!b.friendly && player.parrying > 0 && w0.melee) {
+            const dx = b.x - player.x, dy = b.y - player.y;
+            const d = Math.hypot(dx, dy);
+            if (d < w0.reflectRange) {
+              const a = Math.atan2(dy, dx);
+              if (Math.abs(normAng(a - player.angle)) < w0.reflectArc / 2) {
                 b.friendly = true;
                 b.vx = -b.vx * 1.3;
                 b.vy = -b.vy * 1.3;
@@ -909,7 +912,6 @@ export default function ShooterGame() {
             }
           }
 
-          // wall collision
           for (let wi = 0; wi < walls.length; wi++) {
             const w = walls[wi];
             if (b.x < w.x || b.x > w.x + w.w || b.y < w.y || b.y > w.y + w.h) continue;
@@ -919,21 +921,16 @@ export default function ShooterGame() {
           }
           if (dead) break;
 
-          // barrels
           for (const br of barrels) {
             if (br.exploded) continue;
             if (Math.hypot(b.x - br.x, b.y - br.y) < br.r + b.radius) {
               br.hp -= b.dmg;
-              if (br.hp <= 0) {
-                br.exploded = true;
-                explode(br.x, br.y, 150, 70, 'barrel');
-              }
+              if (br.hp <= 0) { br.exploded = true; explode(br.x, br.y, 150, 70, 'barrel'); }
               dead = true; break;
             }
           }
           if (dead) break;
 
-          // entities
           if (b.friendly) {
             const candidates = enemiesNear(b.x, b.y);
             for (let ei = 0; ei < candidates.length; ei++) {
@@ -967,12 +964,9 @@ export default function ShooterGame() {
     function updateGrenades(dt) {
       for (let i = grenades.length - 1; i >= 0; i--) {
         const g = grenades[i];
-        g.life -= dt;
-        g.t += dt;
-        g.x += g.vx * dt;
-        g.y += g.vy * dt;
-        g.vx *= 0.94;
-        g.vy *= 0.94;
+        g.life -= dt; g.t += dt;
+        g.x += g.vx * dt; g.y += g.vy * dt;
+        g.vx *= 0.94; g.vy *= 0.94;
         if (circleHitsWall(g.x, g.y, 6) || g.life <= 0) {
           explode(g.x, g.y, g.radius, g.dmg, g.friendly ? 'player' : 'enemy');
           grenades.splice(i, 1);
@@ -990,28 +984,37 @@ export default function ShooterGame() {
         const r = Math.random();
         let type;
         if (r < 0.02) type = 'nuke';
-        else if (r < 0.27) type = 'firerate';
-        else if (r < 0.52) type = 'damage';
-        else if (r < 0.78) type = 'reload';
-        else type = 'infinite';
+        else if (r < 0.22) type = 'firerate';
+        else if (r < 0.42) type = 'damage';
+        else if (r < 0.60) type = 'reload';
+        else if (r < 0.78) type = 'infinite';
+        else type = 'health';
         powerupsOnMap.push(makePowerup(x, y, type));
         return;
       }
     }
     function tryDropPowerup(x, y) {
-      if (Math.random() > 0.22) return;
+      if (Math.random() > 0.24) return;
       const r = Math.random();
       let type;
       if (r < 0.03) type = 'nuke';
-      else if (r < 0.30) type = 'firerate';
-      else if (r < 0.58) type = 'damage';
-      else if (r < 0.82) type = 'reload';
-      else type = 'infinite';
+      else if (r < 0.20) type = 'firerate';
+      else if (r < 0.38) type = 'damage';
+      else if (r < 0.55) type = 'reload';
+      else if (r < 0.75) type = 'infinite';
+      else type = 'health';
       powerupsOnMap.push(makePowerup(x, y, type));
     }
     function applyPowerup(p) {
       const def = p.def;
       if (p.type === 'nuke') { detonateNuke(); return; }
+      if (p.type === 'health') {
+        player.hp = Math.min(player.maxHp, player.hp + def.heal);
+        addParticles(player.x, player.y, def.color, 22, 320);
+        screenFlash = { color: def.rgb, alpha: 0.35, decay: 2.5 };
+        shake = Math.max(shake, 5);
+        return;
+      }
       player.buffs[p.type] = def.duration;
       addParticles(player.x, player.y, def.color, 24, 340);
       screenFlash = { color: def.rgb, alpha: 0.45, decay: 2.5 };
@@ -1026,7 +1029,7 @@ export default function ShooterGame() {
         if (dx * dx + dy * dy < (player.r + p.r + 8) ** 2) { applyPowerup(p); powerupsOnMap.splice(i, 1); }
       }
       powerupSpawnTimer -= dt;
-      if (powerupSpawnTimer <= 0 && powerupsOnMap.length < 6) { spawnRandomPowerup(); powerupSpawnTimer = rand(7, 13); }
+      if (powerupSpawnTimer <= 0 && powerupsOnMap.length < 7) { spawnRandomPowerup(); powerupSpawnTimer = rand(6, 11); }
     }
 
     function detonateNuke() {
@@ -1056,13 +1059,11 @@ export default function ShooterGame() {
         }
       }
     }
-
     function updateDrone(dt) {
       if (!drone) return;
       const target = { x: player.x + Math.cos(player.angle + Math.PI) * 45, y: player.y + Math.sin(player.angle + Math.PI) * 45 };
       const dx = target.x - drone.x, dy = target.y - drone.y;
-      drone.x += dx * 5 * dt;
-      drone.y += dy * 5 * dt;
+      drone.x += dx * 5 * dt; drone.y += dy * 5 * dt;
       let nearest = null, nd = 500;
       for (const e of enemies) {
         const d = Math.hypot(e.x - drone.x, e.y - drone.y);
@@ -1078,7 +1079,6 @@ export default function ShooterGame() {
         }
       }
     }
-
     function updateTurrets(dt) {
       for (let i = turrets.length - 1; i >= 0; i--) {
         const t = turrets[i];
@@ -1101,28 +1101,26 @@ export default function ShooterGame() {
     }
 
     /* ═══════════════ ВОЛНЫ / БОССЫ ═══════════════ */
+    function enemiesForWave(w) { return 4 + Math.floor(w * 1.6); }
+
     function startWave() {
       wave++;
-      waveState = 'spawning';
-      spawnedInWave = 0;
       const isBoss = wave === nextBossWave;
       if (isBoss) {
         spawnBoss();
-        // add few minions
         const extra = 2 + Math.floor(wave / 5);
         for (let i = 0; i < extra; i++) spawnEnemy();
-        spawnedInWave = extra + 1;
-        nextBossWave += 10 + Math.floor(Math.random() * 6); // 10-15 waves
+        nextBossWave += 10 + Math.floor(Math.random() * 6); // 10..15 waves
         screenFlash = { color: '255,80,80', alpha: 0.5, decay: 1.5 };
         shake = 22;
-      } else {
         waveState = 'fighting';
+        spawnedInWave = 9999;
+      } else {
+        waveState = 'spawning';
+        spawnedInWave = 0;
       }
       waveTimer = 0;
-    }
-
-    function enemiesForWave(w) {
-      return 4 + Math.floor(w * 1.6);
+      spawnTimer = 0;
     }
 
     /* ═══════════════ ОБНОВЛЕНИЕ ═══════════════ */
@@ -1138,6 +1136,7 @@ export default function ShooterGame() {
         return;
       }
 
+      gameTime += dt;
       shake = Math.max(0, shake - dt * 35);
       for (const k in player.buffs) if (player.buffs[k] > 0) player.buffs[k] = Math.max(0, player.buffs[k] - dt);
       if (player.dashCd > 0) player.dashCd -= dt;
@@ -1148,7 +1147,6 @@ export default function ShooterGame() {
       if (player.grenadeCd > 0) player.grenadeCd -= dt;
       if (player.turretCd > 0) player.turretCd -= dt;
 
-      /* ── dash movement ── */
       if (player.dashing > 0) {
         player.dashing -= dt;
         player.x += player.dashVx * dt;
@@ -1183,13 +1181,11 @@ export default function ShooterGame() {
       const wmx = mouse.x + cam.x, wmy = mouse.y + cam.y;
       player.angle = Math.atan2(wmy - player.y, wmx - player.x);
 
-      /* ── reload ── */
       if (player.reloading > 0) {
         player.reloading -= dt;
         if (player.reloading <= 0) { player.reloading = 0; player.ammo = WEAPONS[menu.weapon].mag; }
       }
 
-      /* ── shooting ── */
       player.cd -= dt;
       const w = WEAPONS[menu.weapon];
       const fireMult = player.buffs.firerate > 0 ? 0.5 : 1;
@@ -1201,13 +1197,10 @@ export default function ShooterGame() {
         if (!w.melee && !infinite) player.ammo--;
         shootPlayer();
       }
-      // RMB parry (katana only)
       if (mouse.rdown && w.melee && player.parrying <= 0) tryParry();
 
-      /* ── medic regen ── */
       if (player.classId === 'medic') player.hp = Math.min(player.maxHp, player.hp + 3 * dt);
 
-      /* ── flow field ── */
       flowTimer -= dt;
       const pCellX = Math.floor(player.x / GRID), pCellY = Math.floor(player.y / GRID);
       const pCell = pCellY * gridCols + pCellX;
@@ -1218,7 +1211,6 @@ export default function ShooterGame() {
         flowTimer = 0.5;
       }
 
-      /* ── enemies ── */
       rebuildSpatialHash();
       for (let i = 0; i < enemies.length; i++) updateEnemy(enemies[i], dt);
 
@@ -1253,10 +1245,6 @@ export default function ShooterGame() {
       updateDrone(dt);
       updateTurrets(dt);
 
-      /* ── barrels wobble ── */
-      for (const br of barrels) { br.wobble *= 0.95; }
-
-      /* ── nuke ── */
       if (nukeEffect) {
         nukeEffect.r += nukeEffect.speed * dt;
         for (const e of enemies) {
@@ -1271,7 +1259,6 @@ export default function ShooterGame() {
         if (nukeEffect.r >= nukeEffect.maxR) nukeEffect = null;
       }
 
-      /* ── enemy deaths ── */
       for (let i = enemies.length - 1; i >= 0; i--) {
         if (enemies[i].hp <= 0) {
           const e = enemies[i];
@@ -1296,27 +1283,18 @@ export default function ShooterGame() {
         spawnTimer -= dt;
         if (spawnedInWave < total && spawnTimer <= 0 && enemies.length < diff.max) {
           if (spawnEnemy()) spawnedInWave++;
-          spawnTimer = 0.25 * diff.spawn;
+          spawnTimer = 0.35 * diff.spawn;
         }
         if (spawnedInWave >= total) waveState = 'fighting';
       } else if (waveState === 'fighting') {
-        // check for boss
-        const hasBoss = enemies.some((e) => e.isBoss);
-        const targetCount = hasBoss ? 1 : 0;
-        // if all dead — wave clear
         if (enemies.length === 0) {
           waveState = 'idle';
           waveTimer = 3.5;
           score += 5;
-          if (wave % 5 === 0) { spawnRandomPowerup(); }
-        } else if (enemies.length < Math.max(2, enemiesForWave(wave) - spawnedInWave - 4)) {
-          // constant trickle
-          spawnTimer -= dt;
-          if (spawnTimer <= 0) { if (spawnEnemy()) spawnTimer = 2.5; }
+          if (wave % 5 === 0) spawnRandomPowerup();
         }
       }
 
-      /* ── particles / decals ── */
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.life -= dt;
@@ -1364,11 +1342,35 @@ export default function ShooterGame() {
       ctx.strokeStyle = color; ctx.fillStyle = color;
       ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       switch (type) {
-        case 'firerate': ctx.beginPath(); ctx.moveTo(s*0.18,-s*0.9); ctx.lineTo(-s*0.38,s*0.05); ctx.lineTo(-s*0.05,s*0.05); ctx.lineTo(-s*0.18,s*0.9); ctx.lineTo(s*0.42,-s*0.1); ctx.lineTo(s*0.06,-s*0.1); ctx.closePath(); ctx.fill(); break;
-        case 'damage': ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = -Math.PI/2 + i*Math.PI/6; const r = i%2===0 ? s*0.98 : s*0.4; const px = Math.cos(a)*r, py = Math.sin(a)*r; if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); } ctx.closePath(); ctx.fill(); break;
-        case 'reload': { ctx.beginPath(); ctx.arc(0,0,s*0.72,-Math.PI*0.72,Math.PI*0.72); ctx.stroke(); const ax=Math.cos(-Math.PI*0.72)*s*0.72, ay=Math.sin(-Math.PI*0.72)*s*0.72; ctx.beginPath(); ctx.moveTo(ax+s*0.3,ay-s*0.05); ctx.lineTo(ax-s*0.05,ay-s*0.4); ctx.lineTo(ax-s*0.1,ay+s*0.15); ctx.closePath(); ctx.fill(); break; }
-        case 'infinite': ctx.beginPath(); ctx.arc(-s*0.4,0,s*0.42,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(s*0.4,0,s*0.42,0,Math.PI*2); ctx.stroke(); break;
-        case 'nuke': for (let i = 0; i < 3; i++) { const a0 = -Math.PI/2 + i*Math.PI*2/3 - Math.PI/6; const a1 = a0+Math.PI/3; ctx.beginPath(); ctx.arc(0,0,s*0.95,a0,a1); ctx.arc(0,0,s*0.35,a1,a0,true); ctx.closePath(); ctx.fill(); } ctx.beginPath(); ctx.arc(0,0,s*0.22,0,Math.PI*2); ctx.fill(); break;
+        case 'firerate':
+          ctx.beginPath(); ctx.moveTo(s*0.18,-s*0.9); ctx.lineTo(-s*0.38,s*0.05); ctx.lineTo(-s*0.05,s*0.05);
+          ctx.lineTo(-s*0.18,s*0.9); ctx.lineTo(s*0.42,-s*0.1); ctx.lineTo(s*0.06,-s*0.1); ctx.closePath(); ctx.fill(); break;
+        case 'damage':
+          ctx.beginPath();
+          for (let i = 0; i < 12; i++) { const a = -Math.PI/2 + i*Math.PI/6; const r = i%2===0 ? s*0.98 : s*0.4; const px = Math.cos(a)*r, py = Math.sin(a)*r; if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+          ctx.closePath(); ctx.fill(); break;
+        case 'reload': {
+          ctx.beginPath(); ctx.arc(0,0,s*0.72,-Math.PI*0.72,Math.PI*0.72); ctx.stroke();
+          const ax=Math.cos(-Math.PI*0.72)*s*0.72, ay=Math.sin(-Math.PI*0.72)*s*0.72;
+          ctx.beginPath(); ctx.moveTo(ax+s*0.3,ay-s*0.05); ctx.lineTo(ax-s*0.05,ay-s*0.4); ctx.lineTo(ax-s*0.1,ay+s*0.15); ctx.closePath(); ctx.fill(); break;
+        }
+        case 'infinite':
+          ctx.beginPath(); ctx.arc(-s*0.4,0,s*0.42,0,Math.PI*2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(s*0.4,0,s*0.42,0,Math.PI*2); ctx.stroke(); break;
+        case 'health':
+          ctx.beginPath();
+          ctx.moveTo(-s*0.15, -s*0.7); ctx.lineTo(s*0.15, -s*0.7); ctx.lineTo(s*0.15, -s*0.15);
+          ctx.lineTo(s*0.7, -s*0.15); ctx.lineTo(s*0.7, s*0.15); ctx.lineTo(s*0.15, s*0.15);
+          ctx.lineTo(s*0.15, s*0.7); ctx.lineTo(-s*0.15, s*0.7); ctx.lineTo(-s*0.15, s*0.15);
+          ctx.lineTo(-s*0.7, s*0.15); ctx.lineTo(-s*0.7, -s*0.15); ctx.lineTo(-s*0.15, -s*0.15);
+          ctx.closePath(); ctx.fill(); break;
+        case 'nuke':
+          for (let i = 0; i < 3; i++) {
+            const a0 = -Math.PI/2 + i*Math.PI*2/3 - Math.PI/6;
+            const a1 = a0+Math.PI/3;
+            ctx.beginPath(); ctx.arc(0,0,s*0.95,a0,a1); ctx.arc(0,0,s*0.35,a1,a0,true); ctx.closePath(); ctx.fill();
+          }
+          ctx.beginPath(); ctx.arc(0,0,s*0.22,0,Math.PI*2); ctx.fill(); break;
       }
       ctx.restore();
     }
@@ -1389,7 +1391,6 @@ export default function ShooterGame() {
         if (sw > 0 && sh > 0) ctx.drawImage(staticCanvas, ssx, ssy, sw, sh, ssx, ssy, sw, sh);
       }
 
-      // decals (blood, holes, scorch)
       for (const d of decals) {
         const a = clamp(d.life / d.maxLife, 0, 1) * (d.kind === 'hole' ? 0.9 : 0.75);
         ctx.globalAlpha = a;
@@ -1398,11 +1399,9 @@ export default function ShooterGame() {
       }
       ctx.globalAlpha = 1;
 
-      // barrels
       for (const br of barrels) {
         if (br.exploded) continue;
-        ctx.save();
-        ctx.translate(br.x, br.y);
+        ctx.save(); ctx.translate(br.x, br.y);
         ctx.beginPath(); ctx.arc(0, 0, br.r, 0, Math.PI * 2);
         ctx.fillStyle = '#c9782a'; ctx.fill();
         ctx.strokeStyle = '#3a2010'; ctx.lineWidth = 2; ctx.stroke();
@@ -1413,7 +1412,6 @@ export default function ShooterGame() {
         ctx.restore();
       }
 
-      // parts
       for (const p of parts) {
         const bob = Math.sin(p.t * 4) * 3;
         const glow = getGlow('#55ddff', 14);
@@ -1427,7 +1425,6 @@ export default function ShooterGame() {
         ctx.beginPath(); ctx.arc(p.x, p.y + bob, p.r * 0.4, 0, Math.PI * 2); ctx.fill();
       }
 
-      // powerups
       for (const p of powerupsOnMap) {
         if (p.x + 60 < cam.x || p.x - 60 > cam.x + W) continue;
         if (p.y + 60 < cam.y || p.y - 60 > cam.y + H) continue;
@@ -1447,7 +1444,6 @@ export default function ShooterGame() {
         drawPowerupIcon(p.def.icon, p.x, p.y + bob, 10, p.def.color);
       }
 
-      // turrets
       for (const t of turrets) {
         ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.angle);
         ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2);
@@ -1455,14 +1451,12 @@ export default function ShooterGame() {
         ctx.strokeStyle = '#7ee787'; ctx.lineWidth = 2; ctx.stroke();
         ctx.fillStyle = '#7ee787'; ctx.fillRect(10, -3, 16, 6);
         ctx.restore();
-        // hp bar
         if (t.hp < t.maxHp) {
           ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(t.x - 18, t.y - 24, 36, 4);
           ctx.fillStyle = '#7ee787'; ctx.fillRect(t.x - 17, t.y - 23, 34 * (t.hp / t.maxHp), 2);
         }
       }
 
-      // particles
       for (const p of particles) {
         const a = clamp(p.life / p.maxLife, 0, 1);
         ctx.globalAlpha = a;
@@ -1471,7 +1465,6 @@ export default function ShooterGame() {
       }
       ctx.globalAlpha = 1;
 
-      // grenades
       for (const g of grenades) {
         ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(g.t * 12);
         ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2);
@@ -1480,7 +1473,6 @@ export default function ShooterGame() {
         ctx.restore();
       }
 
-      // bullets
       for (const b of bullets) {
         if (b.x + 30 < cam.x || b.x - 30 > cam.x + W) continue;
         if (b.y + 30 < cam.y || b.y - 30 > cam.y + H) continue;
@@ -1494,31 +1486,26 @@ export default function ShooterGame() {
         ctx.beginPath(); ctx.arc(b.x, b.y, b.radius * 0.4, 0, Math.PI * 2); ctx.fill();
       }
 
-      // enemies
       for (const e of enemies) {
         if (e.x + 60 < cam.x || e.x - 60 > cam.x + W) continue;
         if (e.y + 60 < cam.y || e.y - 60 > cam.y + H) continue;
         if (e.isBoss) {
-          // boss glow
           const glow = getGlow('#ff4477', 60);
           ctx.globalAlpha = 0.4 + Math.sin(performance.now() / 200) * 0.15;
           ctx.drawImage(glow, e.x - glow.width / 2, e.y - glow.height / 2);
           ctx.globalAlpha = 1;
         }
         drawFighter(e.x, e.y, e.r, e.angle, e.type.bodyColor, e.type.gunColor, e.hitFlash);
-        // shield arc
         if (e.type.shield) {
           ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle);
           ctx.strokeStyle = 'rgba(160,200,240,0.85)'; ctx.lineWidth = 4;
           ctx.beginPath(); ctx.arc(0, 0, e.r + 8, e.type.shieldArc / 2 * -1, e.type.shieldArc / 2); ctx.stroke();
           ctx.restore();
         }
-        // flyer indicator
         if (e.type.flyer) {
           ctx.strokeStyle = 'rgba(93,224,208,0.6)'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.arc(e.x, e.y + e.r + 10, e.r * 0.6, 0, Math.PI * 2); ctx.stroke();
         }
-        // hp bar
         if (e.hp < e.maxHp && !e.isBoss) {
           const bw = 36;
           ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(e.x - bw / 2, e.y - 28, bw, 5);
@@ -1526,7 +1513,6 @@ export default function ShooterGame() {
         }
       }
 
-      // player
       if (state === 'play' || state === 'over') {
         if (player.dashing > 0) {
           ctx.globalAlpha = 0.4;
@@ -1536,33 +1522,24 @@ export default function ShooterGame() {
         }
         drawFighter(player.x, player.y, player.r, player.angle, '#4fc3f7', '#bfe9ff', 0);
 
-        // katana swing arc
         if (player.swingTime > 0 && WEAPONS[menu.weapon].melee) {
           const w = WEAPONS[menu.weapon];
           const t = 1 - player.swingTime / 0.18;
-          ctx.save();
-          ctx.translate(player.x, player.y);
-          ctx.rotate(player.angle);
+          ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
           ctx.globalAlpha = 1 - t;
-          ctx.strokeStyle = '#ff5577';
-          ctx.lineWidth = 6;
-          ctx.beginPath();
-          ctx.arc(0, 0, w.range * 0.85, -w.arc / 2, w.arc / 2);
-          ctx.stroke();
+          ctx.strokeStyle = '#ff5577'; ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.arc(0, 0, w.range * 0.85, -w.arc / 2, w.arc / 2); ctx.stroke();
           ctx.restore();
         }
-        // parry shield visual
         if (player.parrying > 0 && WEAPONS[menu.weapon].melee) {
           const w = WEAPONS[menu.weapon];
           ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle);
           ctx.globalAlpha = 0.75;
           ctx.strokeStyle = '#ff5577'; ctx.lineWidth = 5;
           ctx.beginPath(); ctx.arc(0, 0, w.reflectRange * 0.7, -w.reflectArc / 2, w.reflectArc / 2); ctx.stroke();
-          ctx.restore();
-          ctx.globalAlpha = 1;
+          ctx.restore(); ctx.globalAlpha = 1;
         }
 
-        // dash cooldown
         if (WEAPONS[menu.weapon].melee) {
           const w = WEAPONS[menu.weapon];
           ctx.save();
@@ -1576,7 +1553,6 @@ export default function ShooterGame() {
           ctx.restore();
         }
 
-        // aim line
         ctx.save();
         ctx.globalAlpha = 0.14;
         ctx.strokeStyle = WEAPONS[menu.weapon].color;
@@ -1587,7 +1563,6 @@ export default function ShooterGame() {
         ctx.stroke();
         ctx.restore();
 
-        // drone
         if (drone) {
           ctx.save(); ctx.translate(drone.x, drone.y); ctx.rotate(drone.angle);
           ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2);
@@ -1601,7 +1576,6 @@ export default function ShooterGame() {
           ctx.globalAlpha = 1;
         }
 
-        // nuke effect
         if (nukeEffect) {
           const { x, y, r } = nukeEffect;
           const alpha = Math.max(0, 1 - r / nukeEffect.maxR);
@@ -1614,7 +1588,6 @@ export default function ShooterGame() {
         }
       }
 
-      // damage numbers
       for (const d of damageNumbers) {
         const a = clamp(d.life / d.maxLife, 0, 1);
         ctx.globalAlpha = a;
@@ -1626,7 +1599,6 @@ export default function ShooterGame() {
       }
       ctx.globalAlpha = 1;
 
-      /* ── DYNAMIC LIGHTING ── */
       const darkness = ctx.createRadialGradient(player.x, player.y, 60, player.x, player.y, 520);
       darkness.addColorStop(0, 'rgba(0,0,0,0)');
       darkness.addColorStop(0.5, 'rgba(0,0,0,0.35)');
@@ -1634,7 +1606,6 @@ export default function ShooterGame() {
       ctx.fillStyle = darkness;
       ctx.fillRect(cam.x - 40, cam.y - 40, W + 80, H + 80);
 
-      // muzzle flashes / lights (additive)
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       if (chromaPulse > 0.05) {
@@ -1659,14 +1630,12 @@ export default function ShooterGame() {
 
       ctx.restore();
 
-      // vignette
       const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.98);
       vg.addColorStop(0, 'rgba(0,0,0,0)');
       vg.addColorStop(1, 'rgba(0,0,0,0.65)');
       ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
 
-      // chromatic pulse (red/blue rim)
       if (chromaPulse > 0.1) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
@@ -1694,7 +1663,6 @@ export default function ShooterGame() {
     }
 
     function drawHUD() {
-      // HP
       ctx.fillStyle = 'rgba(10,13,18,.78)';
       ctx.fillRect(14, 14, 280, 68);
       ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
@@ -1715,7 +1683,6 @@ export default function ShooterGame() {
       ctx.font = 'bold 12px system-ui, sans-serif';
       ctx.fillText(DIFFICULTIES[menu.diff].name, 300, 52);
 
-      // wave state
       if (waveState === 'idle' && waveTimer > 0) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(255,255,255,.6)';
@@ -1723,7 +1690,6 @@ export default function ShooterGame() {
         ctx.fillText('ВОЛНА ' + (wave + 1) + ' ЧЕРЕЗ ' + Math.ceil(waveTimer), W / 2, 60);
       }
 
-      // boss bar
       const boss = enemies.find((e) => e.isBoss);
       if (boss) {
         const bw = 600, bh = 18;
@@ -1736,7 +1702,6 @@ export default function ShooterGame() {
         ctx.fillText('БОСС · ФАЗА ' + boss.phase, W / 2, by + bh / 2);
       }
 
-      // weapon panel
       const w = WEAPONS[menu.weapon];
       const infinite = player.buffs.infinite > 0;
       const panelW = 300, panelH = 78;
@@ -1752,7 +1717,7 @@ export default function ShooterGame() {
         ctx.fillStyle = '#fff'; ctx.font = 'bold 22px system-ui, sans-serif';
         ctx.fillText('∞ / ∞', px + panelW / 2, py + 30);
         ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = 'bold 10px system-ui, sans-serif';
-        ctx.fillText('SHIFT — рывок  •  ПКМ — отражение', px + panelW / 2, py + 58);
+        ctx.fillText('SHIFT — рывок  •  ПКМ — парирование', px + panelW / 2, py + 58);
       } else if (infinite) {
         ctx.fillStyle = '#88ff88'; ctx.font = 'bold 26px system-ui, sans-serif';
         ctx.fillText('∞', px + panelW / 2, py + 28);
@@ -1768,7 +1733,6 @@ export default function ShooterGame() {
         }
       }
 
-      // class ability hint
       const cls = CLASSES[menu.cls];
       ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
       ctx.font = 'bold 11px system-ui, sans-serif';
@@ -1781,7 +1745,6 @@ export default function ShooterGame() {
       else if (player.classId === 'sniper') ctx.fillText('+40% урона', 20, H - 24);
       else if (player.classId === 'assault') ctx.fillText('+30 HP · +15% скорость', 20, H - 24);
 
-      // drone/parts
       ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
       if (player.parts > 0) {
         ctx.fillStyle = '#55ddff'; ctx.font = 'bold 11px system-ui, sans-serif';
@@ -1792,7 +1755,6 @@ export default function ShooterGame() {
         ctx.fillText('ДРОН: ' + Math.ceil(drone.hp) + ' HP', W - 20, H - 40);
       }
 
-      // buffs
       const buffs = ['firerate', 'damage', 'reload', 'infinite'];
       const active = buffs.filter((k) => player.buffs[k] > 0);
       if (active.length > 0) {
@@ -1834,11 +1796,13 @@ export default function ShooterGame() {
       const oy = my + (mh - MAP_H * scale) / 2;
       ctx.fillStyle = 'rgba(255,255,255,.14)';
       for (const w of walls) ctx.fillRect(ox + w.x * scale, oy + w.y * scale, Math.max(1, w.w * scale), Math.max(1, w.h * scale));
-      for (const p of powerupsOnMap) { ctx.fillStyle = p.def.color; ctx.beginPath(); ctx.arc(ox + p.x * scale, oy + p.y * scale, 2.6, 0, Math.PI * 2); ctx.fill(); }
+      for (const p of powerupsOnMap) {
+        ctx.fillStyle = p.def.color;
+        ctx.beginPath(); ctx.arc(ox + p.x * scale, oy + p.y * scale, 2.6, 0, Math.PI * 2); ctx.fill();
+      }
       for (const e of enemies) {
-        // sniper sees all; others only in view
         const dist = Math.hypot(e.x - player.x, e.y - player.y);
-        const visible = player.classId === 'sniper' || dist < 800;
+        const visible = player.classId === 'sniper' || dist < 900;
         if (!visible) continue;
         ctx.fillStyle = e.isBoss ? '#ff4477' : e.type.bodyColor;
         ctx.beginPath(); ctx.arc(ox + e.x * scale, oy + e.y * scale, e.isBoss ? 4 : 2, 0, Math.PI * 2); ctx.fill();
@@ -1889,7 +1853,6 @@ export default function ShooterGame() {
       ctx.fillText('ВОЛН ПРОЙДЕНО: ' + Math.max(0, wave - 1), W / 2, H / 2 + 40);
       ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '16px system-ui, sans-serif';
       ctx.fillText('Продержался: ' + gameTime.toFixed(1) + ' сек', W / 2, H / 2 + 72);
-      gameTime = gameTime;
 
       const bW = 260, bH = 60, gap = 24;
       const bx1 = W / 2 - bW - gap / 2, bx2 = W / 2 + gap / 2;
@@ -1910,8 +1873,6 @@ export default function ShooterGame() {
       gameOverButtons.menu = { x: bx2, y: by, w: bW, h: bH };
     }
 
-    let gameTime = 0;
-
     /* ═══════════════ МЕНЮ ═══════════════ */
     function initMenuParticles() {
       menuParticles = [];
@@ -1931,35 +1892,30 @@ export default function ShooterGame() {
 
     function layoutMenu() {
       const cx = W / 2;
-      // weapons row (5 cards)
       const wW = 190, wH = 210, wGap = 14;
       const wTotal = 5 * wW + 4 * wGap;
       const wStart = cx - wTotal / 2;
       const wY = 165;
       menuButtons.weapons = [];
       for (let i = 0; i < 5; i++) menuButtons.weapons.push({ x: wStart + i * (wW + wGap), y: wY, w: wW, h: wH });
-      // classes row (5 cards)
       const cW = 190, cH = 60, cGap = 14;
       const cTotal = 5 * cW + 4 * cGap;
       const cStart = cx - cTotal / 2;
       const cY = wY + wH + 30;
       menuButtons.classes = [];
       for (let i = 0; i < 5; i++) menuButtons.classes.push({ x: cStart + i * (cW + cGap), y: cY, w: cW, h: cH });
-      // difficulty row (3)
       const dW = 220, dH = 58, dGap = 18;
       const dTotal = 3 * dW + 2 * dGap;
       const dStart = cx - dTotal / 2;
       const dY = cY + cH + 26;
       menuButtons.difficulties = [];
       for (let i = 0; i < 3; i++) menuButtons.difficulties.push({ x: dStart + i * (dW + dGap), y: dY, w: dW, h: dH });
-      // biome row (4)
       const bW = 190, bH = 54, bGap = 14;
       const bTotal = 4 * bW + 3 * bGap;
       const bStart = cx - bTotal / 2;
       const bY = dY + dH + 22;
       menuButtons.biomes = [];
       for (let i = 0; i < 4; i++) menuButtons.biomes.push({ x: bStart + i * (bW + bGap), y: bY, w: bW, h: bH });
-      // start
       const sW = 340, sH = 66;
       menuButtons.start = { x: cx - sW / 2, y: bY + bH + 20, w: sW, h: sH };
     }
@@ -1984,11 +1940,10 @@ export default function ShooterGame() {
       ctx.fillText('АРЕНА', W / 2, 62);
       ctx.restore();
       ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = 'bold 12px system-ui, sans-serif';
-      ctx.fillText('T O P - D O W N   S H O O T E R   ·   v 2.0', W / 2, 108);
+      ctx.fillText('T O P - D O W N   S H O O T E R   ·   v 2.1', W / 2, 108);
 
       const hx = mouse.x, hy = mouse.y;
 
-      // weapons
       ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.fillText('ОРУЖИЕ', menuButtons.weapons[0].x, menuButtons.weapons[0].y - 8);
       for (let i = 0; i < 5; i++) {
@@ -2004,7 +1959,6 @@ export default function ShooterGame() {
           ctx.strokeStyle = hov ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.08)'; ctx.lineWidth = 1.5;
           ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
         }
-        // weapon icon
         ctx.save(); ctx.translate(r.x + r.w / 2, r.y + 45);
         ctx.fillStyle = sel ? w.color : 'rgba(255,255,255,.7)';
         if (w.melee) {
@@ -2019,11 +1973,10 @@ export default function ShooterGame() {
         }
         ctx.restore();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = sel ? w.color : '#fff'; ctx.font = 'bold 13px system-ui, sans-serif';
+        ctx.fillStyle = sel ? w.color : '#fff'; ctx.font = 'bold 12px system-ui, sans-serif';
         ctx.fillText(w.name, r.x + r.w / 2, r.y + 92);
         ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = 'bold 9px system-ui, sans-serif';
         ctx.fillText(w.tag, r.x + r.w / 2, r.y + 110);
-        // stats
         const statY = r.y + 132;
         const statLabels = [['УРОН', w.stats.dmg], ['ТЕМП', w.stats.rate], ['МАГ', w.stats.mag]];
         for (let s = 0; s < 3; s++) {
@@ -2037,7 +1990,6 @@ export default function ShooterGame() {
         }
       }
 
-      // classes
       ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.fillText('КЛАСС', menuButtons.classes[0].x, menuButtons.classes[0].y - 8);
       for (let i = 0; i < 5; i++) {
@@ -2055,7 +2007,6 @@ export default function ShooterGame() {
         ctx.fillText(c.desc, r.x + r.w / 2, r.y + 42);
       }
 
-      // difficulty
       ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.fillText('СЛОЖНОСТЬ', menuButtons.difficulties[0].x, menuButtons.difficulties[0].y - 8);
       for (let i = 0; i < 3; i++) {
@@ -2073,7 +2024,6 @@ export default function ShooterGame() {
         ctx.fillText(d.desc, r.x + r.w / 2, r.y + 40);
       }
 
-      // biomes
       ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.fillText('БИОМ', menuButtons.biomes[0].x, menuButtons.biomes[0].y - 8);
       for (let i = 0; i < 4; i++) {
@@ -2084,17 +2034,13 @@ export default function ShooterGame() {
         ctx.strokeStyle = sel ? b.accent : hov ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.1)';
         ctx.lineWidth = sel ? 2.5 : 1.5;
         ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
-        // mini preview swatch
-        ctx.fillStyle = b.wall;
-        ctx.fillRect(r.x + 8, r.y + 8, 32, r.h - 16);
-        ctx.fillStyle = b.accent;
-        ctx.fillRect(r.x + 10, r.y + 10, 4, r.h - 20);
+        ctx.fillStyle = b.wall; ctx.fillRect(r.x + 8, r.y + 8, 32, r.h - 16);
+        ctx.fillStyle = b.accent; ctx.fillRect(r.x + 10, r.y + 10, 4, r.h - 20);
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillStyle = sel ? b.accent : '#fff'; ctx.font = 'bold 12px system-ui, sans-serif';
         ctx.fillText(b.name, r.x + 52, r.y + r.h / 2);
       }
 
-      // start button
       const br = menuButtons.start;
       const bhov = pointInRect(hx, hy, br);
       const pulse = 0.6 + Math.sin(t * 3) * 0.4;
@@ -2200,6 +2146,48 @@ export default function ShooterGame() {
     canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     canvas.addEventListener('touchend', onTouchEnd, { passive: false });
 
+    /* ═══════════════ FULLSCREEN / RESIZE ═══════════════ */
+    function resizeCanvas(newW, newH) {
+      canvas.width = newW;
+      canvas.height = newH;
+      W = newW;
+      H = newH;
+      layoutMenu();
+      updateCursor();
+    }
+
+    function computeFsSize() {
+      const ar = 1100 / 780;
+      let w = window.innerWidth;
+      let h = window.innerHeight;
+      if (w / h > ar) w = h * ar;
+      else h = w / ar;
+      const maxW = 2200;
+      if (w > maxW) { const s = maxW / w; w *= s; h *= s; }
+      return { w: Math.max(480, Math.round(w)), h: Math.max(340, Math.round(h)) };
+    }
+
+    function onFsChange() {
+      const fs = !!document.fullscreenElement;
+      setIsFs(fs);
+      if (fs) {
+        const { w, h } = computeFsSize();
+        resizeCanvas(w, h);
+      } else {
+        resizeCanvas(1100, 780);
+      }
+    }
+
+    function onWinResize() {
+      if (document.fullscreenElement) {
+        const { w, h } = computeFsSize();
+        resizeCanvas(w, h);
+      }
+    }
+
+    document.addEventListener('fullscreenchange', onFsChange);
+    window.addEventListener('resize', onWinResize);
+
     /* ═══════════════ СТАРТ / СБРОС ═══════════════ */
     function startGame() {
       biomeIdx = menu.biome;
@@ -2214,7 +2202,6 @@ export default function ShooterGame() {
       let hp = 100, speed = 255;
       if (cls.id === 'assault') { hp = 130; speed = 293; }
       else if (cls.id === 'medic') { hp = 130; }
-      // sniper doesn't get hp bonus
 
       player = {
         x: MAP_W / 2, y: MAP_H / 2, r: 14,
@@ -2239,7 +2226,6 @@ export default function ShooterGame() {
       decals = [];
       damageNumbers = [];
       powerupsOnMap = [];
-      barrels = barrels || [];
       parts = [];
       turrets = [];
       grenades = [];
@@ -2279,8 +2265,6 @@ export default function ShooterGame() {
     }
 
     /* ═══════════════ ИНИЦИАЛИЗАЦИЯ ═══════════════ */
-    layoutMenu();
-    initMenuParticles();
     initWorker();
 
     walls = [];
@@ -2301,6 +2285,9 @@ export default function ShooterGame() {
     staticCanvas = document.createElement('canvas');
     staticCanvas.width = 8; staticCanvas.height = 8;
 
+    layoutMenu();
+    initMenuParticles();
+
     /* ═══════════════ ЦИКЛ ═══════════════ */
     let lastTime = performance.now();
     let rafId = 0;
@@ -2320,6 +2307,8 @@ export default function ShooterGame() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('fullscreenchange', onFsChange);
+      window.removeEventListener('resize', onWinResize);
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('contextmenu', onContextMenu);
@@ -2333,21 +2322,93 @@ export default function ShooterGame() {
   }, []);
 
   return (
-    <div className="shooter-shell">
-      <canvas
-        ref={canvasRef}
-        width={1100}
-        height={780}
-        className="shooter-canvas"
-        aria-label="Мини-игра: арена"
-      />
+    <div ref={shellRef} className="shooter-shell">
+      <div className="shooter-canvas-wrap">
+        <canvas
+          ref={canvasRef}
+          width={1100}
+          height={780}
+          className="shooter-canvas"
+          aria-label="Мини-игра: арена"
+        />
+        <button
+          className="fs-btn"
+          onClick={toggleFullscreen}
+          title={isFs ? 'Выйти из полноэкранного режима' : 'На весь экран'}
+          aria-label={isFs ? 'Выйти из полного экрана' : 'Открыть на весь экран'}
+        >
+          {isFs ? '✕' : '⛶'}
+        </button>
+      </div>
       <style jsx>{`
-        .shooter-shell { display: flex; justify-content: center; width: 100%; padding: 8px 0 24px; }
+        .shooter-shell {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+          padding: 8px 0 24px;
+          position: relative;
+        }
+        .shooter-canvas-wrap {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
         .shooter-canvas {
           background: #0d1016;
           border-radius: 12px;
-          box-shadow: 0 24px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.05);
-          max-width: 100%; height: auto; display: block; touch-action: none;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
+          max-width: 100%;
+          height: auto;
+          display: block;
+          touch-action: none;
+        }
+        .fs-btn {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          z-index: 20;
+          width: 38px;
+          height: 38px;
+          background: rgba(10, 14, 20, 0.75);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          color: #eaeaea;
+          cursor: pointer;
+          font-size: 18px;
+          line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          transition: all 0.18s ease;
+          backdrop-filter: blur(6px);
+          font-family: ui-monospace, monospace;
+        }
+        .fs-btn:hover {
+          background: #fff;
+          color: #000;
+          border-color: #fff;
+          transform: scale(1.05);
+        }
+        .shooter-shell:fullscreen {
+          width: 100vw;
+          height: 100vh;
+          padding: 0;
+          background: #000;
+          align-items: center;
+          justify-content: center;
+        }
+        .shooter-shell:fullscreen .shooter-canvas-wrap {
+          width: 100vw;
+          height: 100vh;
+          align-items: center;
+          justify-content: center;
+        }
+        .shooter-shell:fullscreen .shooter-canvas {
+          max-width: 100vw;
+          max-height: 100vh;
+          border-radius: 0;
+          box-shadow: none;
         }
       `}</style>
     </div>
