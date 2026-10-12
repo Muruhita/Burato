@@ -1,5 +1,6 @@
 import Layout from '../components/Layout';
 import { useState, useEffect, useMemo } from 'react';
+import { getRankLabel, getRankShort } from '../lib/ranks';
 
 const DEPT_SHORT = {
   ib: 'IB', cid: 'CID', fa: 'FA', hrt: 'HRT',
@@ -13,6 +14,8 @@ const SORT_OPTIONS = [
   { id: 'nick-desc', label: 'НИК ↓' },
   { id: 'dept-asc',  label: 'ОТДЕЛ ↑' },
   { id: 'dept-desc', label: 'ОТДЕЛ ↓' },
+  { id: 'rank-desc', label: 'РАНГ ↓' },
+  { id: 'rank-asc',  label: 'РАНГ ↑' },
   { id: 'status',    label: 'СТАТУС' },
 ];
 
@@ -34,16 +37,19 @@ export default function Members() {
       .catch(() => setLoading(false));
   }, []);
 
-  // ── Список доступных отделов ──
   const availableDepts = useMemo(() => {
     const set = new Set();
-    users.forEach(u => {
-      if (u.department) set.add(u.department);
-    });
+    users.forEach(u => { if (u.department) set.add(u.department); });
     return Array.from(set).sort();
   }, [users]);
 
-  // ── Фильтр + сортировка ──
+  const rankValue = (r) => {
+    if (!r) return -1;
+    if (r === 'director') return 100;
+    const n = parseInt(r);
+    return isNaN(n) ? -1 : n;
+  };
+
   const visibleUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -66,6 +72,10 @@ export default function Members() {
           return deptName(a.department).localeCompare(deptName(b.department));
         case 'dept-desc':
           return deptName(b.department).localeCompare(deptName(a.department));
+        case 'rank-desc':
+          return rankValue(b.rank) - rankValue(a.rank);
+        case 'rank-asc':
+          return rankValue(a.rank) - rankValue(b.rank);
         case 'status':
           if (a.banned === b.banned) return (a.nickname || '').localeCompare(b.nickname || '', 'ru');
           return a.banned ? 1 : -1;
@@ -101,7 +111,6 @@ export default function Members() {
           <div className="ph-rule" />
         </header>
 
-        {/* ── ПАНЕЛЬ ФИЛЬТРОВ ── */}
         {users.length > 0 && (
           <section className="filters">
             <div className="filter-row">
@@ -115,9 +124,7 @@ export default function Members() {
                   placeholder="Поиск по нику, юзернейму или Discord ID..."
                 />
                 {search && (
-                  <button className="search-clear" onClick={() => setSearch('')} title="Очистить">
-                    ✕
-                  </button>
+                  <button className="search-clear" onClick={() => setSearch('')} title="Очистить">✕</button>
                 )}
               </div>
 
@@ -143,9 +150,7 @@ export default function Members() {
               </select>
 
               {hasFilters && (
-                <button className="filter-reset" onClick={resetFilters}>
-                  ✕ СБРОС
-                </button>
+                <button className="filter-reset" onClick={resetFilters}>✕ СБРОС</button>
               )}
             </div>
 
@@ -153,15 +158,12 @@ export default function Members() {
               <span className="fm-found">
                 НАЙДЕНО: <strong>{visibleUsers.length}</strong> / {users.length}
               </span>
-              {deptFilter && (
-                <span className="fm-chip">ОТДЕЛ: {DEPT_SHORT[deptFilter] || deptFilter}</span>
-              )}
+              {deptFilter && <span className="fm-chip">ОТДЕЛ: {DEPT_SHORT[deptFilter] || deptFilter}</span>}
               {search && <span className="fm-chip">ПОИСК: «{search}»</span>}
             </div>
           </section>
         )}
 
-        {/* ── РЕЕСТР ── */}
         {users.length === 0 ? (
           <section className="panel">
             <div className="panel-body center">
@@ -183,6 +185,8 @@ export default function Members() {
               const hasCustomImage = user.profileCustom?.type === 'image' && user.profileCustom?.url;
               const presetId = user.profileCustom?.type === 'preset' ? user.profileCustom.presetId : null;
               const dept = DEPT_SHORT[user.department] || user.department || '—';
+              const rankLabel = getRankLabel(user.rank);
+              const rankShort = getRankShort(user.rank);
 
               let cardClass = 'member';
               if (presetId && presetId !== 'default') cardClass += ` member-preset-${presetId}`;
@@ -198,6 +202,12 @@ export default function Members() {
                       className="member-bg"
                       style={{ backgroundImage: `url(${user.profileCustom.url})` }}
                     />
+                  )}
+
+                  {rankShort && (
+                    <span className="member-rank" title={rankLabel || ''}>
+                      {rankShort}
+                    </span>
                   )}
 
                   <div className="member-inner">
@@ -219,6 +229,9 @@ export default function Members() {
                       <div className="member-user">
                         @{user.username || 'unknown'}
                       </div>
+                      {rankLabel && (
+                        <div className="member-rank-line">{rankLabel}</div>
+                      )}
                     </div>
                   </div>
 
@@ -271,7 +284,7 @@ export default function Members() {
           margin: 18px 0 0;
         }
 
-        /* ═══ ПАНЕЛЬ ФИЛЬТРОВ ═══ */
+        /* ═══ ФИЛЬТРЫ ═══ */
         .filters {
           background: #0c0c0c;
           border: 1px solid #1f1f1f;
@@ -425,7 +438,6 @@ export default function Members() {
           box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
         }
 
-        /* ── Пресеты карточек ── */
         .member-preset-blue {
           background: linear-gradient(135deg, #1e3a8a, #3b82f6);
           border-color: #3b82f6;
@@ -456,6 +468,28 @@ export default function Members() {
           pointer-events: none;
         }
         .member:hover .member-bg { opacity: 0.35; }
+
+        /* Ранг бейдж в правом верхнем углу */
+        .member-rank {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          min-width: 28px;
+          height: 22px;
+          padding: 0 6px;
+          background: rgba(0, 0, 0, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          color: #fff;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
+          border-radius: 2px;
+        }
 
         .member-inner {
           position: relative;
@@ -510,6 +544,17 @@ export default function Members() {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
+        .member-rank-line {
+          margin-top: 4px;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1px;
+          color: #b0b0b0;
+          text-transform: uppercase;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
 
         .member-foot {
           position: relative;
@@ -530,10 +575,7 @@ export default function Members() {
         .m-status.is-banned { color: #ff8080; }
 
         /* ── ПУСТЫЕ СОСТОЯНИЯ ── */
-        .panel {
-          background: #0c0c0c;
-          border: 1px solid #1f1f1f;
-        }
+        .panel { background: #0c0c0c; border: 1px solid #1f1f1f; }
         .panel-body.center { padding: 60px 20px; text-align: center; }
         .empty-icon {
           font-family: ui-monospace, monospace;
