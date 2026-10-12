@@ -1,6 +1,7 @@
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import ImageUploader from '../../components/ImageUploader';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
@@ -35,6 +36,20 @@ export default function HiringForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.passportScreenshot) {
+      alert('⚠️ Загрузите скриншот паспорта.');
+      return;
+    }
+    if (!formData.militaryId) {
+      alert('⚠️ Загрузите военный билет.');
+      return;
+    }
+    if (!formData.medicalCertificates) {
+      alert('⚠️ Загрузите медицинские справки.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
@@ -133,41 +148,26 @@ export default function HiringForm() {
               </select>
             </div>
 
-            <div className="field-block">
-              <label className="lbl">Скриншот паспорта (ссылка)</label>
-              <input
-                className="field"
-                type="url"
-                value={formData.passportScreenshot}
-                onChange={(e) => setFormData({ ...formData, passportScreenshot: e.target.value })}
-                required
-                placeholder="https://imgur.com/..."
-              />
-            </div>
+            <ImageUploader
+              label="Скриншот паспорта"
+              value={formData.passportScreenshot}
+              onChange={(url) => setFormData(prev => ({ ...prev, passportScreenshot: url }))}
+              allowManualUrl
+            />
 
-            <div className="field-block">
-              <label className="lbl">Военный билет (ссылка)</label>
-              <input
-                className="field"
-                type="url"
-                value={formData.militaryId}
-                onChange={(e) => setFormData({ ...formData, militaryId: e.target.value })}
-                required
-                placeholder="https://imgur.com/..."
-              />
-            </div>
+            <ImageUploader
+              label="Военный билет"
+              value={formData.militaryId}
+              onChange={(url) => setFormData(prev => ({ ...prev, militaryId: url }))}
+              allowManualUrl
+            />
 
-            <div className="field-block">
-              <label className="lbl">Мед. справки (ссылка)</label>
-              <input
-                className="field"
-                type="url"
-                value={formData.medicalCertificates}
-                onChange={(e) => setFormData({ ...formData, medicalCertificates: e.target.value })}
-                required
-                placeholder="https://imgur.com/..."
-              />
-            </div>
+            <ImageUploader
+              label="Медицинские справки"
+              value={formData.medicalCertificates}
+              onChange={(url) => setFormData(prev => ({ ...prev, medicalCertificates: url }))}
+              allowManualUrl
+            />
 
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
               {submitting
