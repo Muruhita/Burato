@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import MultiImageUploader from '../../components/MultiImageUploader';
 
 const DEPARTMENTS = [
   { id: 'ib', name: 'IB (Intelligence Branch)' },
@@ -37,7 +38,8 @@ export default function ReportForm() {
     currentRank: '',
     targetRank: '',
     isInstructor: '',
-    workLinks: ''
+    workLinks: '',
+    workImages: []
   });
 
   const targetRankNum = parseInt(formData.targetRank);
@@ -45,29 +47,54 @@ export default function ReportForm() {
     (targetRankNum === 9 || targetRankNum === 10) && formData.department !== 'fa';
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/me').then(res => res.json()),
-      fetch('/api/profile').then(res => res.json())
-    ]).then(([meData, profileData]) => {
-      if (!meData.user) { router.push('/'); return; }
-      setUser(meData.user);
-      if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
-      if (profileData.department) setFormData(prev => ({ ...prev, department: profileData.department }));
-      if (profileData.banned) {
-        setBanned(true);
-        setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(profileData.banUntil || null);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [meRes, profileRes] = await Promise.all([
+          fetch('/api/me'),
+          fetch('/api/profile')
+        ]);
+        const meData = await meRes.json().catch(() => ({}));
+        const profileData = await profileRes.json().catch(() => ({}));
+
+        if (cancelled) return;
+        if (!meData?.user) { router.push('/'); return; }
+
+        setUser(meData.user);
+        if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
+        if (profileData.department) setFormData(prev => ({ ...prev, department: profileData.department }));
+        if (profileData.banned) {
+          setBanned(true);
+          setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
+          setBanUntil(profileData.banUntil || null);
+        }
+      } catch (e) {
+        console.error('[report] load error:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
-    });
+    })();
+
+    return () => { cancelled = true; };
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (showInstructorField && formData.isInstructor !== 'yes') {
       alert('⚠️ Для повышения на 9 или 10 ранг необходимо подтвердить назначение на инструктора!');
       return;
     }
+
+    const hasLinks = formData.workLinks && formData.workLinks.trim().length > 0;
+    const hasImages = Array.isArray(formData.workImages) && formData.workImages.length > 0;
+
+    if (!hasLinks && !hasImages) {
+      alert('⚠️ Приложите хотя бы одну ссылку или скриншот проделанной работы.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
@@ -80,7 +107,8 @@ export default function ReportForm() {
           currentRank: formData.currentRank,
           targetRank: formData.targetRank,
           isInstructor: formData.isInstructor || 'no',
-          workLinks: formData.workLinks
+          workLinks: formData.workLinks,
+          workImages: formData.workImages
         })
       });
       if (res.ok) {
@@ -121,7 +149,7 @@ export default function ReportForm() {
             <div className="fh-stamp">FORM-003 · REPORT</div>
             <h1 className="fh-title">Отчёт на повышение</h1>
             <p className="fh-sub">
-              Внутренний отчёт на повышение в своём отделе. Приложите ссылки на проделанную работу.
+              Внутренний отчёт на повышение в своём отделе. Приложите ссылки или скриншоты проделанной работы.
             </p>
             <div className="fh-rule" />
           </header>
@@ -198,20 +226,26 @@ export default function ReportForm() {
               <label className="lbl">Ссылки на проделанную работу</label>
               <textarea
                 className="field"
-                required
                 value={formData.workLinks}
                 onChange={(e) => setFormData({ ...formData, workLinks: e.target.value })}
                 rows="4"
-                placeholder="https://..."
+                placeholder="https://... (необязательно, если ниже приложены скриншоты)"
               />
             </div>
+
+            <MultiImageUploader
+              label="Скриншоты проделанной работы"
+              value={formData.workImages}
+              onChange={(urls) => setFormData(prev => ({ ...prev, workImages: urls }))}
+              max={10}
+            />
 
             <div className="field-block">
               <label className="lbl">Discord (автоматически)</label>
               <input
                 className="field"
                 type="text"
-                value={`${user.username} (${user.id})`}
+                value={user ? `${user.username} (${user.id})` : ''}
                 disabled
                 style={{ opacity: 0.45, cursor: 'not-allowed' }}
               />
