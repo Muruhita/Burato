@@ -152,7 +152,7 @@ export default function ImageUploader({
                     className="manual-toggle"
                     onClick={() => setShowManual(true)}
                   >
-                    🔗 Если не работает — вставьте ссылку вручную
+                    🔗 Если не работает — вставьте ссылку вручную (Нажмите чтобы вставить)
                   </button>
                 ) : (
                   <div className="manual-block">
@@ -301,22 +301,22 @@ export default function ImageUploader({
         }
 
         .manual-toggle {
-          display: block;
-          width: 100%;
-          margin-top: 10px;
-          background: transparent;
-          border: none;
-          color: #777;
-          font-size: 12px;
-          text-align: center;
-          padding: 6px;
-          cursor: pointer;
-          border-radius: 6px;
-          transition: color 0.2s;
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+        background: transparent;
+        border: none;
+        color: #777;
+        font-size: 12px;
+        text-align: center;
+        padding: 6px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: color 0.2s;
         }
         .manual-toggle:hover {
-          color: #C4A5F0;
-          text-decoration: underline;
+        color: #C4A5F0;
+        text-decoration: underline;
         }
 
         .manual-block {
