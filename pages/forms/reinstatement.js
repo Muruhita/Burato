@@ -3,11 +3,18 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import ImageUploader from '../../components/ImageUploader';
+import { RANKS } from '../../lib/ranks';
 
 export default function ReinstatementForm() {
   const router = useRouter();
   const [nickname, setNickname] = useState('');
-  const [formData, setFormData] = useState({ rank: '', proof: '', wasBannedWarned: 'no', approvalLink: '' });
+  const [formData, setFormData] = useState({
+    rank: '',
+    proof: '',
+    wasBannedWarned: 'no',
+    approvalLink: ''
+  });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -16,18 +23,32 @@ export default function ReinstatementForm() {
   const [banUntil, setBanUntil] = useState(null);
 
   useEffect(() => {
-    fetch('/api/profile').then(res => res.json()).then(data => {
-      if (data.nickname) setNickname(data.nickname);
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
-    }).catch(() => {});
+    fetch('/api/profile')
+      .then(res => res.json())
+      .then(data => {
+        if (data.nickname) setNickname(data.nickname);
+        if (data.rank) setFormData(prev => ({ ...prev, rank: data.rank }));
+        if (data.banned) {
+          setBanned(true);
+          setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
+          setBanUntil(data.banUntil || null);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.proof) {
+      alert('⚠️ Загрузите доказательства (последнее повышение + увольнение).');
+      return;
+    }
+    if (formData.wasBannedWarned === 'yes' && !formData.approvalLink) {
+      alert('⚠️ Загрузите ссылку на одобрение.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
@@ -89,26 +110,27 @@ export default function ReinstatementForm() {
 
             <div className="field-block">
               <label className="lbl">Ранг на момент увольнения</label>
-              <input
+              <select
                 className="field"
-                type="text"
+                required
                 value={formData.rank}
                 onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
-                required
-              />
+              >
+                <option value="">-- ВЫБЕРИТЕ РАНГ --</option>
+                {RANKS.map(r => (
+                  <option key={r.value} value={r.value}>
+                    {r.num ? `${r.num} · ${r.label}` : r.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="field-block">
-              <label className="lbl">Доказательства (последнее повышение + увольнение)</label>
-              <textarea
-                className="field"
-                value={formData.proof}
-                onChange={(e) => setFormData({ ...formData, proof: e.target.value })}
-                required
-                rows="4"
-                placeholder="Ссылка на скриншоты"
-              />
-            </div>
+            <ImageUploader
+              label="Доказательства (последнее повышение + увольнение)"
+              value={formData.proof}
+              onChange={(url) => setFormData(prev => ({ ...prev, proof: url }))}
+              allowManualUrl
+            />
 
             <div className="field-block">
               <label className="lbl">Уволен после Ban/Warn?</label>
@@ -124,16 +146,12 @@ export default function ReinstatementForm() {
             </div>
 
             {formData.wasBannedWarned === 'yes' && (
-              <div className="field-block">
-                <label className="lbl">Ссылка на одобрение (State Fraction)</label>
-                <input
-                  className="field"
-                  type="text"
-                  value={formData.approvalLink}
-                  onChange={(e) => setFormData({ ...formData, approvalLink: e.target.value })}
-                  required
-                />
-              </div>
+              <ImageUploader
+                label="Ссылка на одобрение (State Fraction)"
+                value={formData.approvalLink}
+                onChange={(url) => setFormData(prev => ({ ...prev, approvalLink: url }))}
+                allowManualUrl
+              />
             )}
 
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
