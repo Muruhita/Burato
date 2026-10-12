@@ -764,13 +764,38 @@ if (type === 'report') {
     ];
   }
 
-  if (type === 'highrank') {
-    return [
+if (type === 'highrank') {
+    const fields = [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
-      { name: '📊 С какого - на какой ранг', value: data.rankRange || 'Не указано', inline: false },
-      { name: '🔗 Ссылка на проделанную работу:', value: data.workLink || 'Не указано', inline: false },
-      ...baseFields
+      { name: '📊 С какого - на какой ранг', value: data.rankRange || 'Не указано', inline: false }
     ];
+
+    if (data.workLink && String(data.workLink).trim().length > 0) {
+      fields.push({
+        name: '🔗 Ссылки на проделанную работу:',
+        value: data.workLink,
+        inline: false
+      });
+    }
+
+    if (Array.isArray(data.workImages) && data.workImages.length > 0) {
+      fields.push({
+        name: `📸 Скриншоты проделанной работы (${data.workImages.length})`,
+        value: data.workImages.join('\n'),
+        inline: false
+      });
+    }
+
+    if (!data.workLink && (!data.workImages || data.workImages.length === 0)) {
+      fields.push({
+        name: '🔗 Проделанная работа',
+        value: 'Не указано',
+        inline: false
+      });
+    }
+
+    fields.push(...baseFields);
+    return fields;
   }
 
   if (type === 'resignation') {
