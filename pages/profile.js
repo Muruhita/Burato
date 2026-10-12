@@ -1,5 +1,6 @@
 import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
+import { RANKS } from '../lib/ranks';
 
 const DEPARTMENTS = [
   { id: 'ib',       name: 'IB (Intelligence Branch)' },
@@ -36,6 +37,7 @@ export default function Profile() {
   const [user, setUser] = useState(null);
   const [nickname, setNickname] = useState('');
   const [department, setDepartment] = useState('');
+  const [rank, setRank] = useState('');
   const [custom, setCustom] = useState({ type: 'preset', presetId: 'default' });
   const [customImageUrl, setCustomImageUrl] = useState('');
   const [banned, setBanned] = useState(false);
@@ -62,6 +64,7 @@ export default function Profile() {
         setUser(data.user);
         setNickname(data.nickname || '');
         setDepartment(data.department || '');
+        setRank(data.rank || '');
         setBanned(data.banned);
         if (data.profileCustom) {
           setCustom(data.profileCustom);
@@ -82,7 +85,7 @@ export default function Profile() {
     const res = await fetch('/api/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, department })
+      body: JSON.stringify({ nickname, department, rank })
     });
     const data = await res.json();
     setStatus(data.message || data.error);
@@ -119,6 +122,10 @@ export default function Profile() {
   }
 
   const deptName = DEPARTMENTS.find(d => d.id === department)?.name || department || '—';
+  const rankObj = RANKS.find(r => r.value === rank);
+  const rankDisplay = rankObj
+    ? (rankObj.num ? `${rankObj.num} · ${rankObj.label}` : rankObj.label)
+    : '—';
 
   const previewStyle = custom.type === 'image' && customImageUrl
     ? {
@@ -135,7 +142,7 @@ export default function Profile() {
         <header className="page-head">
           <div className="ph-stamp">DOSSIER · PERSONAL FILE</div>
           <h1 className="ph-title">ПРОФИЛЬ<span className="ph-dot">.</span></h1>
-          <p className="ph-sub">Ваша учётная запись и внешний вид карточки</p>
+          <p className="ph-sub">Ваша учётная запись, ранг и внешний вид карточки</p>
           <div className="ph-rule" />
         </header>
 
@@ -175,6 +182,10 @@ export default function Profile() {
                     <div className="id-row">
                       <span className="id-key">CALLSIGN</span>
                       <span className="id-val">{nickname || '—'}</span>
+                    </div>
+                    <div className="id-row">
+                      <span className="id-key">RANK</span>
+                      <span className="id-val">{rankDisplay}</span>
                     </div>
                     <div className="id-row">
                       <span className="id-key">DEPARTMENT</span>
@@ -217,6 +228,22 @@ export default function Profile() {
                 </div>
 
                 <div className="field-block">
+                  <label className="lbl">Ваш ранг</label>
+                  <select
+                    className="field"
+                    value={rank}
+                    onChange={(e) => setRank(e.target.value)}
+                  >
+                    <option value="">-- НЕ ВЫБРАН --</option>
+                    {RANKS.map(r => (
+                      <option key={r.value} value={r.value}>
+                        {r.num ? `${r.num} · ${r.label}` : r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-block">
                   <label className="lbl">Ваш отдел</label>
                   <select
                     className="field"
@@ -245,7 +272,6 @@ export default function Profile() {
               </div>
               <div className="panel-body">
                 <div className="custom-grid">
-                  {/* Левая колонка — настройки */}
                   <div className="custom-form">
                     <label className="lbl">Пресет</label>
                     <div className="preset-row">
@@ -281,7 +307,6 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  {/* Правая колонка — превью */}
                   <div className="custom-preview-wrap">
                     <label className="lbl">Превью</label>
                     <div className="card-preview" style={previewStyle}>
@@ -298,6 +323,11 @@ export default function Profile() {
                       <div className="cp-nick">{nickname || 'Ваш ник'}</div>
                       <div className="cp-user">@{user.username}</div>
                       <div className="cp-dept">[{deptName.split(' ')[0]}]</div>
+                      {rankObj && (
+                        <div className="cp-rank">
+                          {rankObj.num ? `${rankObj.num} · ` : ''}{rankObj.label}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -475,10 +505,7 @@ export default function Profile() {
           color: #fff;
           line-height: 1;
         }
-        .quota-max {
-          font-size: 12px;
-          color: #555;
-        }
+        .quota-max { font-size: 12px; color: #555; }
 
         /* ── ПОЛЯ ── */
         .field-block { margin-bottom: 20px; }
@@ -618,7 +645,7 @@ export default function Profile() {
           padding: 18px 14px;
           text-align: center;
           color: #fff;
-          min-height: 200px;
+          min-height: 220px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -671,6 +698,15 @@ export default function Profile() {
           font-family: ui-monospace, monospace;
           font-size: 9.5px;
           letter-spacing: 1.4px;
+        }
+        .cp-rank {
+          margin-top: 4px;
+          font-family: ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 1px;
+          color: #fff;
+          opacity: 0.9;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
         .loading-line {
