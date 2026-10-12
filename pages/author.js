@@ -8,7 +8,7 @@ const AUTHOR = {
   displayName: 'Mur Kiratu',
   discordId: '1018113109346504744',
   email: 'murkilanki@gmail.com',
-  avatar: 'https://i.pinimg.com/736x/8f/c7/20/8fc7201fb1ee4228df360fa848395597.jpg',
+  avatar: 'https://media1.tenor.com/m/IKG9QgfmvK4AAAAC/oshi-no-ko-kana-arima.gif',
   roles: ['ADMIN', 'DEVELOPER'],
   bio: 'Создатель и хранитель FIB Forms. Пишу код, чтобы заявки уходили туда, куда нужно, а не в никуда.',
   site: 'http://saketo.xo.je/?i=2',
