@@ -334,6 +334,9 @@ export default function AdminPanel() {
               {banPermanent ? '🔒 ЗАБАНИТЬ НАВСЕГДА' : '⏱ ЗАБЛОКИРОВАТЬ · 7 ДНЕЙ'}
             </button>
             {banMsg && <p className="msg">{banMsg}</p>}
+            <a href="/admin/duplicates" className="btn" style={{ marginTop: 12 }}>
+                  👥 ПРОВЕРИТЬ МУЛЬТИАККАУНТЫ
+            </a>
           </div>
         </section>
 
