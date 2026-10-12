@@ -1,16 +1,20 @@
 import { useState, useRef } from 'react';
+import { isSafeUrl, TRUSTED_IMAGE_HOSTS } from '../lib/urlValidator';
 
-const MAX_SIZE_MB = 5;
+const MAX_SIZE_MB = 10;
 
 export default function MultiImageUploader({
   value = [],
   onChange,
   label = 'Скриншоты',
-  max = 5
+  max = 10,
+  allowManualUrl = true
 }) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [showManual, setShowManual] = useState(false);
+  const [manualText, setManualText] = useState('');
   const inputRef = useRef(null);
 
   const uploadFile = async (file) => {
@@ -83,6 +87,81 @@ export default function MultiImageUploader({
     onChange(value.filter((_, i) => i !== idx));
   };
 
+  // ── Ручной ввод нескольких ссылок ──
+  const parseManualUrls = (raw) => {
+    return raw
+      .split(/[\s,;]+/)          // пробел, запятая, точка с запятой, перенос строки
+      .map(s => s.trim())
+      .filter(Boolean);
+  };
+
+  const applyManualUrls = () => {
+    setError('');
+    const urls = parseManualUrls(manualText);
+
+    if (!urls.length) {
+      setError('❌ Введите хотя бы одну ссылку');
+      return;
+    }
+
+    const slotsLeft = max - value.length;
+    if (slotsLeft <= 0) {
+      setError(`❌ Максимум ${max} картинок`);
+      return;
+    }
+
+    const valid = [];
+    const invalid = [];
+
+    for (const url of urls) {
+      const safe = isSafeUrl(url, {
+        maxLength: 1000,
+        allowedHosts: TRUSTED_IMAGE_HOSTS
+      });
+      if (safe) {
+        valid.push(url);
+      } else {
+        invalid.push(url);
+      }
+    }
+
+    if (!valid.length) {
+      setError('❌ Ни одна ссылка не прошла проверку. Разрешены только доверенные хостеры.');
+      return;
+    }
+
+    const toAdd = valid.slice(0, slotsLeft);
+    const skippedByLimit = valid.length - toAdd.length;
+
+    onChange([...value, ...toAdd]);
+
+    if (invalid.length || skippedByLimit > 0) {
+      const parts = [];
+      if (invalid.length) parts.push(`невалидных: ${invalid.length}`);
+      if (skippedByLimit > 0) parts.push(`сверх лимита: ${skippedByLimit}`);
+      setError(`⚠️ Добавлено ${toAdd.length}. Пропущено — ${parts.join(', ')}.`);
+    }
+
+    // Очистить textarea, если всё хорошо
+    if (!invalid.length && skippedByLimit === 0) {
+      setManualText('');
+      setShowManual(false);
+    } else {
+      // оставить только невалидные/не вошедшие строки, чтобы можно было поправить
+      const leftover = [
+        ...invalid,
+        ...valid.slice(slotsLeft)
+      ].join('\n');
+      setManualText(leftover);
+    }
+  };
+
+  const cancelManual = () => {
+    setShowManual(false);
+    setManualText('');
+    setError('');
+  };
+
   const isUploading = uploadingCount > 0;
   const canAdd = value.length < max;
   const hasItems = value.length > 0 || isUploading;
@@ -95,7 +174,7 @@ export default function MultiImageUploader({
           {value.length > 0 && <span className="counter">{value.length}/{max}</span>}
         </label>
 
-        {/* Пустая форма — большая зона */}
+        {/* Пусто — большая dropzone */}
         {!hasItems && (
           <div
             className={`dropzone ${dragging ? 'dragging' : ''}`}
@@ -155,6 +234,43 @@ export default function MultiImageUploader({
               </div>
             )}
           </div>
+        )}
+
+        {/* Ручной ввод нескольких ссылок */}
+        {allowManualUrl && canAdd && !isUploading && (
+          <>
+            {!showManual ? (
+              <button
+                type="button"
+                className="manual-toggle"
+                onClick={() => setShowManual(true)}
+              >
+                🔗 Если не работает — вставьте вручную (Нажмите сюда чтобы вставить)
+              </button>
+            ) : (
+              <div className="manual-block">
+                <p className="manual-hint">
+                  Каждая ссылка — с новой строки или через запятую. До {max - value.length} шт.
+                </p>
+                <textarea
+                  className="manual-textarea"
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value)}
+                  placeholder={'https://i.ibb.co/abc1.png\nhttps://i.imgur.com/abc2.png\nhttps://cdn.discordapp.com/...'}
+                  rows="4"
+                  autoFocus
+                />
+                <div className="manual-actions">
+                  <button type="button" className="manual-apply" onClick={applyManualUrls}>
+                    ✓ Применить ({parseManualUrls(manualText).length})
+                  </button>
+                  <button type="button" className="manual-cancel" onClick={cancelManual}>
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <input
@@ -347,6 +463,104 @@ export default function MultiImageUploader({
           animation: spin 0.8s linear infinite;
         }
 
+        /* ── Ручной ввод ── */
+        .manual-toggle {
+          display: block;
+          width: 100%;
+          margin-top: 12px;
+          padding: 14px 16px;
+          background: rgba(168, 85, 247, 0.08);
+          border: 1px dashed rgba(168, 85, 247, 0.55);
+          color: #C4A5F0;
+          font-size: 13.5px;
+          font-weight: 600;
+          text-align: center;
+          cursor: pointer;
+          border-radius: 10px;
+          transition: all 0.22s ease;
+          font-family: inherit;
+          line-height: 1.4;
+        }
+        .manual-toggle:hover {
+          background: rgba(168, 85, 247, 0.18);
+          border-color: #A855F7;
+          border-style: solid;
+          color: #fff;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 22px rgba(168, 85, 247, 0.25);
+        }
+
+        .manual-block {
+          margin-top: 12px;
+          padding: 14px;
+          background: rgba(168, 85, 247, 0.06);
+          border: 1px solid rgba(168, 85, 247, 0.3);
+          border-radius: 10px;
+          animation: manualIn 0.25s ease;
+        }
+        .manual-hint {
+          color: #888;
+          font-size: 11.5px;
+          margin: 0 0 8px;
+          line-height: 1.5;
+        }
+        .manual-textarea {
+          width: 100%;
+          padding: 10px 12px;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.15);
+          color: #fff;
+          border-radius: 8px;
+          font-size: 13px;
+          font-family: ui-monospace, monospace;
+          box-sizing: border-box;
+          outline: none;
+          resize: vertical;
+          line-height: 1.5;
+          transition: border-color 0.2s;
+        }
+        .manual-textarea:focus {
+          border-color: #A855F7;
+          box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15);
+        }
+        .manual-textarea::placeholder { color: #555; }
+
+        .manual-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .manual-apply {
+          flex: 1;
+          padding: 9px 14px;
+          background: rgba(168, 85, 247, 0.25);
+          border: 1px solid rgba(168, 85, 247, 0.5);
+          color: #E0C8FF;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+        .manual-apply:hover {
+          background: rgba(168, 85, 247, 0.4);
+          color: #fff;
+        }
+        .manual-cancel {
+          padding: 9px 14px;
+          background: transparent;
+          border: 1px solid rgba(255,255,255,0.15);
+          color: #888;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 13px;
+          transition: all 0.2s;
+        }
+        .manual-cancel:hover {
+          border-color: rgba(255,255,255,0.3);
+          color: #ccc;
+        }
+
         .uploader-error {
           margin-top: 8px;
           color: #ff6b6b;
@@ -357,6 +571,10 @@ export default function MultiImageUploader({
         @keyframes gridIn {
           from { opacity: 0; transform: scale(0.98); }
           to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes manualIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </>
