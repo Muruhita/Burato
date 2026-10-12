@@ -235,7 +235,8 @@ async function sendToDiscord(webhookUrl, data, threadId = null, retries = 3) {
 const IMAGE_FIELDS = [
   'screenshot', 'screenshots', 'singleImage', 'multiImages',
   'proof', 'proofLink', 'rankProof',
-  'passportScreenshot', 'militaryId', 'medicalCertificates'
+  'passportScreenshot', 'militaryId', 'medicalCertificates',
+  'workImages'
 ];
 
 const DOC_FIELDS = [
@@ -631,18 +632,44 @@ function buildFields(type, department, targetDepartment, data, userId, username)
     ];
   }
 
-  if (type === 'report') {
+if (type === 'report') {
     const dept = DEPARTMENTS[department];
     const instructorText = data.isInstructor === 'yes' ? '✅ Да' : '❌ Нет';
-    return [
+
+    const fields = [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       { name: '🏢 Отдел', value: dept ? `${dept.emoji} ${dept.name}` : 'Не указан', inline: false },
       { name: '📌 Текущий ранг', value: data.currentRank || 'Не указан', inline: false },
       { name: '🎯 Ранг на который повышаются', value: data.targetRank || 'Не указан', inline: false },
-      { name: '👨‍🏫 Назначен ли на инструктора', value: instructorText, inline: false },
-      { name: '🔗 Ссылки на проделанную работу:', value: data.workLinks || 'Не указаны', inline: false },
-      ...baseFields
+      { name: '👨‍🏫 Назначен ли на инструктора', value: instructorText, inline: false }
     ];
+
+    if (data.workLinks && String(data.workLinks).trim().length > 0) {
+      fields.push({
+        name: '🔗 Ссылки на проделанную работу:',
+        value: data.workLinks,
+        inline: false
+      });
+    }
+
+    if (Array.isArray(data.workImages) && data.workImages.length > 0) {
+      fields.push({
+        name: `📸 Скриншоты проделанной работы (${data.workImages.length})`,
+        value: data.workImages.join('\n'),
+        inline: false
+      });
+    }
+
+    if (!data.workLinks && (!data.workImages || data.workImages.length === 0)) {
+      fields.push({
+        name: '🔗 Проделанная работа',
+        value: 'Не указано',
+        inline: false
+      });
+    }
+
+    fields.push(...baseFields);
+    return fields;
   }
 
   if (type === 'transfer') {
