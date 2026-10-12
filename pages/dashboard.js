@@ -19,8 +19,8 @@ const FORMS = [
   // ── Отпуск ──
   { id: 'leave',           code: 'FORM-012', title: 'Отпуск',                icon: '◐',  path: '/forms/leave',            desc: 'Заявка на IC или OOC отпуск',                      tag: 'PERSONNEL' },
   // ── ДБ ──
-  { id: 'db',              code: 'FORM-013', title: 'Запрос на ДБ',          icon: '☰',  path: '/forms/db',               desc: 'Запрос на день блата',                             tag: 'PERSONNEL' },
-  { id: 'ukmb',            code: 'FORM-015', title: 'Запрос на УКМБ',        icon: '❖',  path: '/forms/ukmb',             desc: 'Учебно-квалификационный минимум бойца',            tag: 'ACADEMY' },
+  { id: 'db',              code: 'FORM-013', title: 'Запрос на ДБ',          icon: '☰',  path: '/forms/db',               desc: 'Запрос на день блата',                             tag: 'PERSONNEL', toggleable: true },
+  { id: 'ukmb',            code: 'FORM-015', title: 'Запрос на УКМБ',        icon: '❖',  path: '/forms/ukmb',             desc: 'Учебно-квалификационный минимум бойца',            tag: 'ACADEMY',   toggleable: true },
   // ── Trainee ──
   { id: 'exam',            code: 'FORM-014', title: 'Запрос на экзамен',     icon: '◇',  path: '/forms/exam',             desc: 'Запрос на сдачу экзамена (устный / практический)', tag: 'TRAINING' },
 ];
@@ -28,12 +28,14 @@ const FORMS = [
 const CATEGORIES = [
   { id: 'all',     label: 'ВСЕ ФОРМЫ', icon: '▤', formIds: null },
   { id: 'db',      label: 'ДБ',        icon: '☰', formIds: ['db', 'ukmb'] },
-  { id: 'trainee', label: 'TRAINEE',   icon: '◇', formIds: ['exam','report','promotion'] },
+  { id: 'trainee', label: 'TRAINEE',   icon: '◇', formIds: ['exam'] },
+  { id: 'leave',   label: 'ОТПУСК',    icon: '◐', formIds: ['leave'] },
 ];
 
 export default function Dashboard() {
   const router = useRouter();
   const [activeCat, setActiveCat] = useState('all');
+  const [formStatus, setFormStatus] = useState({});
 
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
@@ -50,6 +52,11 @@ export default function Dashboard() {
         }
       })
       .catch(() => {});
+
+    fetch('/api/forms-status')
+      .then(res => res.json())
+      .then(data => { if (data.forms) setFormStatus(data.forms); })
+      .catch(() => {});
   }, []);
 
   const now = new Date();
@@ -60,6 +67,15 @@ export default function Dashboard() {
   const visibleForms = activeCategory.formIds
     ? FORMS.filter(f => activeCategory.formIds.includes(f.id))
     : FORMS;
+
+  const handleOpen = (form) => {
+    const disabled = form.toggleable && formStatus[form.id] === false;
+    if (disabled) {
+      alert('🚫 Эта форма временно отключена администрацией.');
+      return;
+    }
+    router.push(form.path);
+  };
 
   return (
     <Layout>
@@ -115,40 +131,62 @@ export default function Dashboard() {
 
         {/* ─── СЕТКА ФОРМ ─── */}
         <section className="grid" key={activeCat}>
-          {visibleForms.map((form, i) => (
-            <article
-              key={form.code}
-              className="folder"
-              onClick={() => router.push(form.path)}
-              style={{ animationDelay: `${i * 0.04}s` }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') router.push(form.path); }}
-            >
-              <div className="folder-tab">
-                <span className="folder-code">{form.code}</span>
-                <span className="folder-tag">{form.tag}</span>
-              </div>
+          {visibleForms.map((form, i) => {
+            const isToggleable = !!form.toggleable;
+            const isDisabled = isToggleable && formStatus[form.id] === false;
 
-              <div className="folder-body">
-                <div className="folder-icon">{form.icon}</div>
-                <div className="folder-text">
-                  <h3 className="folder-title">{form.title}</h3>
-                  <p className="folder-desc">{form.desc}</p>
+            return (
+              <article
+                key={form.code}
+                className={`folder ${isDisabled ? 'folder-disabled' : ''}`}
+                onClick={() => handleOpen(form)}
+                style={{ animationDelay: `${i * 0.04}s` }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleOpen(form); }}
+              >
+                <div className="folder-tab">
+                  <span className="folder-code">{form.code}</span>
+                  <span className="folder-tag">{form.tag}</span>
                 </div>
-              </div>
 
-              <div className="folder-foot">
-                <span className="folder-open">ОТКРЫТЬ БЛАНК</span>
-                <span className="folder-arrow">→</span>
-              </div>
+                <div className="folder-body">
+                  <div className="folder-icon">{form.icon}</div>
+                  <div className="folder-text">
+                    <h3 className="folder-title">{form.title}</h3>
+                    <p className="folder-desc">{form.desc}</p>
+                  </div>
+                </div>
 
-              <span className="corner corner-tl" />
-              <span className="corner corner-tr" />
-              <span className="corner corner-bl" />
-              <span className="corner corner-br" />
-            </article>
-          ))}
+                <div className="folder-foot">
+                  {isDisabled ? (
+                    <>
+                      <span className="folder-open folder-open-off">● ОТКЛЮЧЕНО</span>
+                      <span className="folder-arrow">×</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="folder-open">ОТКРЫТЬ БЛАНК</span>
+                      <span className="folder-arrow">→</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Индикатор состояния у переключаемых форм */}
+                {isToggleable && !isDisabled && (
+                  <span className="folder-badge folder-badge-on" title="Форма включена">ВКЛ</span>
+                )}
+                {isToggleable && isDisabled && (
+                  <span className="folder-badge folder-badge-off" title="Форма отключена">ВЫКЛ</span>
+                )}
+
+                <span className="corner corner-tl" />
+                <span className="corner corner-tr" />
+                <span className="corner corner-bl" />
+                <span className="corner corner-br" />
+              </article>
+            );
+          })}
         </section>
 
         {/* ─── ПОДВАЛ ─── */}
@@ -350,6 +388,43 @@ export default function Dashboard() {
         .folder:hover .folder-tab { border-bottom-color: #000; }
         .folder:hover .folder-foot { border-top-color: #000; }
 
+        /* ── ОТКЛЮЧЁННАЯ КАРТОЧКА ── */
+        .folder-disabled {
+          background: #090909;
+          border-color: #1a1a1a;
+          cursor: not-allowed;
+          opacity: 0.55;
+        }
+        .folder-disabled:hover,
+        .folder-disabled:focus-visible {
+          background: #0c0c0c;
+          border-color: #3a1a1a;
+          transform: none;
+          box-shadow: 0 0 0 1px #3a1a1a;
+        }
+        .folder-disabled:hover .folder-title,
+        .folder-disabled:hover .folder-desc,
+        .folder-disabled:hover .folder-code,
+        .folder-disabled:hover .folder-tag,
+        .folder-disabled:hover .folder-icon,
+        .folder-disabled:hover .folder-open,
+        .folder-disabled:hover .folder-arrow,
+        .folder-disabled:hover .corner {
+          color: inherit;
+          border-color: inherit;
+        }
+        .folder-disabled .folder-icon {
+          color: #555;
+          background: #060606;
+          border-color: #222;
+        }
+        .folder-disabled .folder-title { color: #888; }
+        .folder-disabled .folder-desc  { color: #555; }
+        .folder-disabled .folder-code  { color: #666; }
+        .folder-disabled .folder-tag   { color: #444; }
+        .folder-disabled .folder-tab   { border-bottom-color: #1a1a1a; }
+        .folder-disabled .folder-foot  { border-top-color: #1a1a1a; }
+
         .folder-tab {
           display: flex;
           justify-content: space-between;
@@ -426,12 +501,53 @@ export default function Dashboard() {
           transition: color 0.25s ease, border-color 0.25s ease;
         }
         .folder-open { color: inherit; transition: color 0.25s ease; }
+        .folder-open-off {
+          color: #a04040;
+          letter-spacing: 2px;
+        }
         .folder-arrow {
           font-size: 14px;
           color: #fff;
           transition: transform 0.25s ease, color 0.25s ease;
         }
         .folder:hover .folder-arrow { transform: translateX(4px); }
+        .folder-disabled:hover .folder-arrow { transform: none; }
+
+        /* Бейдж ВКЛ/ВЫКЛ */
+        .folder-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          font-family: ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          padding: 3px 8px;
+          text-transform: uppercase;
+          font-weight: 800;
+          border: 1px solid;
+          pointer-events: none;
+          z-index: 2;
+        }
+        .folder-badge-on {
+          color: #0a0a0a;
+          background: #d8d8d8;
+          border-color: #d8d8d8;
+        }
+        .folder-badge-off {
+          color: #ff8080;
+          background: rgba(60, 20, 20, 0.4);
+          border-color: #553030;
+        }
+        .folder:hover .folder-badge-on {
+          background: #000;
+          color: #fff;
+          border-color: #000;
+        }
+        .folder-disabled:hover .folder-badge-off {
+          color: #ff8080;
+          background: rgba(60, 20, 20, 0.4);
+          border-color: #553030;
+        }
 
         .corner {
           position: absolute;
@@ -496,6 +612,12 @@ export default function Dashboard() {
           .folder-icon { flex: 0 0 38px; height: 38px; font-size: 18px; }
           .folder-title { font-size: 14px; }
           .folder-desc { font-size: 12px; }
+          .folder-badge {
+            top: 8px;
+            right: 8px;
+            font-size: 8px;
+            padding: 2px 6px;
+          }
         }
       `}</style>
     </Layout>
