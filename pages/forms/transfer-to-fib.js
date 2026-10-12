@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import ImageUploader from '../../components/ImageUploader';
 
 export default function TransferToFibForm() {
   const router = useRouter();
@@ -16,24 +17,42 @@ export default function TransferToFibForm() {
   const [banUntil, setBanUntil] = useState(null);
 
   useEffect(() => {
-    fetch('/api/profile').then(res => res.json()).then(data => {
-      if (data.nickname) setNickname(data.nickname);
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
-    }).catch(() => {});
+    fetch('/api/profile')
+      .then(res => res.json())
+      .then(data => {
+        if (data.nickname) setNickname(data.nickname);
+        if (data.banned) {
+          setBanned(true);
+          setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
+          setBanUntil(data.banUntil || null);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.approval) {
+      alert('⚠️ Загрузите одобрение от начальства.');
+      return;
+    }
+    if (!formData.rankProof) {
+      alert('⚠️ Загрузите доказательство ранга.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'transferToFib', fullName: nickname, ...formData })
+        body: JSON.stringify({
+          type: 'transferToFib',
+          fullName: nickname,
+          approval: formData.approval,
+          rankProof: formData.rankProof
+        })
       });
       if (res.ok) {
         setSuccess(true);
@@ -87,29 +106,19 @@ export default function TransferToFibForm() {
               />
             </div>
 
-            <div className="field-block">
-              <label className="lbl">Одобрение от начальства (ссылка)</label>
-              <input
-                className="field"
-                type="text"
-                value={formData.approval}
-                onChange={(e) => setFormData({ ...formData, approval: e.target.value })}
-                required
-                placeholder="https://..."
-              />
-            </div>
+            <ImageUploader
+              label="Одобрение от начальства"
+              value={formData.approval}
+              onChange={(url) => setFormData(prev => ({ ...prev, approval: url }))}
+              allowManualUrl
+            />
 
-            <div className="field-block">
-              <label className="lbl">Доказательство ранга (скрин с планшета)</label>
-              <textarea
-                className="field"
-                value={formData.rankProof}
-                onChange={(e) => setFormData({ ...formData, rankProof: e.target.value })}
-                required
-                rows="4"
-                placeholder="Вставьте ссылку на скриншот"
-              />
-            </div>
+            <ImageUploader
+              label="Доказательство ранга (скрин с планшета)"
+              value={formData.rankProof}
+              onChange={(url) => setFormData(prev => ({ ...prev, rankProof: url }))}
+              allowManualUrl
+            />
 
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
               {submitting
