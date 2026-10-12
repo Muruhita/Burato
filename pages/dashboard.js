@@ -28,7 +28,7 @@ const FORMS = [
 const CATEGORIES = [
   { id: 'all',     label: 'ВСЕ ФОРМЫ', icon: '▤', formIds: null },
   { id: 'db',      label: 'ДБ',        icon: '☰', formIds: ['db', 'ukmb'] },
-  { id: 'trainee', label: 'TRAINEE',   icon: '◇', formIds: ['exam'] },
+  { id: 'trainee', label: 'TRAINEE',   icon: '◇', formIds: ['exam', 'promotion', 'report'] },
   { id: 'leave',   label: 'ОТПУСК',    icon: '◐', formIds: ['leave'] },
 ];
 
