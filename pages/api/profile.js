@@ -2,6 +2,7 @@ import redis from '../../lib/redis';
 import { verifyToken } from '../../lib/discord';
 import { containsBadWords } from '../../lib/badwords';
 import { getBanInfo } from '../../lib/ban-utils';
+import { isValidRank } from '../../lib/ranks';
 
 const ALLOWED_PRESETS = ['default', 'blue', 'purple', 'green'];
 const MAX_URL_LENGTH = 500;
@@ -31,9 +32,12 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   if (req.method === 'GET') {
-    const nickname = await redis.get(`nickname:${user.id}`);
-    const department = await redis.get(`department:${user.id}`);
-    const profileCustomRaw = await redis.get(`profileCustom:${user.id}`);
+    const [nickname, department, rank, profileCustomRaw] = await Promise.all([
+      redis.get(`nickname:${user.id}`),
+      redis.get(`department:${user.id}`),
+      redis.get(`rank:${user.id}`),
+      redis.get(`profileCustom:${user.id}`),
+    ]);
     const { banned, reason: banReason, until: banUntil } = await getBanInfo(user.id);
 
     let profileCustom = null;
@@ -45,6 +49,7 @@ export default async function handler(req, res) {
       user,
       nickname,
       department,
+      rank,
       profileCustom,
       banned,
       banReason,
@@ -53,9 +58,8 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { nickname, department, profileCustom } = req.body;
+    const { nickname, department, rank, profileCustom } = req.body;
 
-    // Валидация ника
     if (nickname !== undefined) {
       if (!nickname || containsBadWords(nickname)) {
         return res.status(400).json({ error: 'Никнейм содержит запрещенные слова!' });
@@ -63,12 +67,20 @@ export default async function handler(req, res) {
       await redis.set(`nickname:${user.id}`, nickname);
     }
 
-    // Валидация отдела
     if (department !== undefined) {
       await redis.set(`department:${user.id}`, department);
     }
 
-    // Валидация кастома
+    if (rank !== undefined) {
+      if (rank === '' || rank === null) {
+        await redis.del(`rank:${user.id}`);
+      } else if (!isValidRank(rank)) {
+        return res.status(400).json({ error: 'Некорректный ранг' });
+      } else {
+        await redis.set(`rank:${user.id}`, String(rank));
+      }
+    }
+
     if (profileCustom !== undefined) {
       if (profileCustom === null) {
         await redis.del(`profileCustom:${user.id}`);
