@@ -30,6 +30,7 @@ export default function Layout({ children }) {
     { name: 'PROFILE',  path: '/profile',   icon: '◉' },
     { name: 'MEMBERS',  path: '/members',   icon: '⎔' },
     { name: 'HELP',     path: '/help',      icon: '?' },
+    { name: 'SETTINGS', path: '/settings',  icon: '☰' },
     ...(isAdmin ? [{ name: 'ADMIN', path: '/admin', icon: '⚙' }] : []),
   ];
 
