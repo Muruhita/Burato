@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
-// import { ADMIN_IDS } from '../../lib/admins';
+import MultiImageUploader from '../../components/MultiImageUploader';
 
 const RANK_OPTIONS = [
   '1-2 ранг', '2-3 ранг', '3-4 ранг', '4-5 ранг', '5-6 ранг',
@@ -23,37 +23,71 @@ export default function HighRankReportForm() {
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
 
-  const [formData, setFormData] = useState({ fullName: '', rankRange: '', workLink: '' });
+  const [formData, setFormData] = useState({
+    fullName: '',
+    rankRange: '',
+    workLink: '',
+    workImages: []
+  });
   const [conditions, setConditions] = useState('');
   const [editConditions, setEditConditions] = useState(false);
   const [tempConditions, setTempConditions] = useState('');
   const [conditionStatus, setConditionStatus] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/me').then(res => res.json()),
-      fetch('/api/profile').then(res => res.json()),
-      fetch('/api/promotion-conditions').then(res => res.json())
-    ]).then(([meData, profileData, conditionsData]) => {
-      if (!meData.user) { router.push('/'); return; }
-      setUser(meData.user);
-      setIsAdmin(!!meData.isAdmin);
-      if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
-      if (profileData.banned) {
-        setBanned(true);
-        setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(profileData.banUntil || null);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [meRes, profileRes, conditionsRes] = await Promise.all([
+          fetch('/api/me'),
+          fetch('/api/profile'),
+          fetch('/api/promotion-conditions')
+        ]);
+
+        const meData = await meRes.json().catch(() => ({}));
+        const profileData = await profileRes.json().catch(() => ({}));
+        const conditionsData = await conditionsRes.json().catch(() => ({}));
+
+        if (cancelled) return;
+        if (!meData?.user) { router.push('/'); return; }
+
+        setUser(meData.user);
+        setIsAdmin(!!meData.isAdmin);
+
+        if (profileData.nickname) {
+          setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
+        }
+        if (profileData.banned) {
+          setBanned(true);
+          setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
+          setBanUntil(profileData.banUntil || null);
+        }
+        if (conditionsData.content) {
+          setConditions(conditionsData.content);
+          setTempConditions(conditionsData.content);
+        }
+      } catch (e) {
+        console.error('[high-rank] load error:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      if (conditionsData.content) {
-        setConditions(conditionsData.content);
-        setTempConditions(conditionsData.content);
-      }
-      setLoading(false);
-    });
+    })();
+
+    return () => { cancelled = true; };
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const hasLinks = formData.workLink && formData.workLink.trim().length > 0;
+    const hasImages = Array.isArray(formData.workImages) && formData.workImages.length > 0;
+
+    if (!hasLinks && !hasImages) {
+      alert('⚠️ Приложите хотя бы одну ссылку или скриншот проделанной работы.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
@@ -63,7 +97,8 @@ export default function HighRankReportForm() {
           type: 'highrank',
           fullName: formData.fullName,
           rankRange: formData.rankRange,
-          workLink: formData.workLink
+          workLink: formData.workLink,
+          workImages: formData.workImages
         })
       });
       if (res.ok) {
@@ -123,7 +158,7 @@ export default function HighRankReportForm() {
               <div className="fh-stamp">FORM-004 · HIGH-RANK</div>
               <h1 className="fh-title">Отчёт на повышение HR</h1>
               <p className="fh-sub">
-                Отчёт для Dep.Head и выше. Приложите ссылку на проделанную работу.
+                Отчёт для Dep.Head и выше. Приложите ссылки или скриншоты проделанной работы.
               </p>
               <div className="fh-rule" />
             </header>
@@ -155,23 +190,29 @@ export default function HighRankReportForm() {
               </div>
 
               <div className="field-block">
-                <label className="lbl">Ссылка на проделанную работу</label>
+                <label className="lbl">Ссылки на проделанную работу</label>
                 <textarea
                   className="field"
-                  required
                   value={formData.workLink}
                   onChange={(e) => setFormData({ ...formData, workLink: e.target.value })}
                   rows="5"
-                  placeholder="https://..."
+                  placeholder="https://... (необязательно, если ниже приложены скриншоты)"
                 />
               </div>
+
+              <MultiImageUploader
+                label="Скриншоты проделанной работы"
+                value={formData.workImages}
+                onChange={(urls) => setFormData(prev => ({ ...prev, workImages: urls }))}
+                max={10}
+              />
 
               <div className="field-block">
                 <label className="lbl">Discord (автоматически)</label>
                 <input
                   className="field"
                   type="text"
-                  value={`${user.username} (${user.id})`}
+                  value={user ? `${user.username} (${user.id})` : ''}
                   disabled
                   style={{ opacity: 0.45, cursor: 'not-allowed' }}
                 />
