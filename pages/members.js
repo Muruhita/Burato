@@ -1,5 +1,5 @@
 import Layout from '../components/Layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 const DEPT_SHORT = {
   ib: 'IB', cid: 'CID', fa: 'FA', hrt: 'HRT',
@@ -8,9 +8,21 @@ const DEPT_SHORT = {
   director: 'DIR', cod: 'COD', assh: 'ASS'
 };
 
+const SORT_OPTIONS = [
+  { id: 'nick-asc',  label: 'НИК ↑' },
+  { id: 'nick-desc', label: 'НИК ↓' },
+  { id: 'dept-asc',  label: 'ОТДЕЛ ↑' },
+  { id: 'dept-desc', label: 'ОТДЕЛ ↓' },
+  { id: 'status',    label: 'СТАТУС' },
+];
+
 export default function Members() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [sortBy, setSortBy] = useState('nick-asc');
 
   useEffect(() => {
     fetch('/api/users')
@@ -22,6 +34,57 @@ export default function Members() {
       .catch(() => setLoading(false));
   }, []);
 
+  // ── Список доступных отделов ──
+  const availableDepts = useMemo(() => {
+    const set = new Set();
+    users.forEach(u => {
+      if (u.department) set.add(u.department);
+    });
+    return Array.from(set).sort();
+  }, [users]);
+
+  // ── Фильтр + сортировка ──
+  const visibleUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    let list = users.filter(u => {
+      if (deptFilter && u.department !== deptFilter) return false;
+      if (!q) return true;
+      const haystack = `${u.nickname || ''} ${u.username || ''} ${u.userId || ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+
+    const deptName = (id) => DEPT_SHORT[id] || id || '';
+
+    list = [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'nick-asc':
+          return (a.nickname || '').localeCompare(b.nickname || '', 'ru');
+        case 'nick-desc':
+          return (b.nickname || '').localeCompare(a.nickname || '', 'ru');
+        case 'dept-asc':
+          return deptName(a.department).localeCompare(deptName(b.department));
+        case 'dept-desc':
+          return deptName(b.department).localeCompare(deptName(a.department));
+        case 'status':
+          if (a.banned === b.banned) return (a.nickname || '').localeCompare(b.nickname || '', 'ru');
+          return a.banned ? 1 : -1;
+        default:
+          return 0;
+      }
+    });
+
+    return list;
+  }, [users, search, deptFilter, sortBy]);
+
+  const hasFilters = search.trim() || deptFilter || sortBy !== 'nick-asc';
+
+  const resetFilters = () => {
+    setSearch('');
+    setDeptFilter('');
+    setSortBy('nick-asc');
+  };
+
   if (loading) {
     return <Layout><div className="loading-line">ЗАГРУЗКА РЕЕСТРА...</div></Layout>;
   }
@@ -32,10 +95,73 @@ export default function Members() {
         <header className="page-head">
           <div className="ph-stamp">ROSTER · PERSONNEL FILE</div>
           <h1 className="ph-title">ЛИЧНЫЙ СОСТАВ<span className="ph-dot">.</span></h1>
-          <p className="ph-sub">Реестр зарегистрированных сотрудников FIB Forms · {users.length} записей</p>
+          <p className="ph-sub">
+            Реестр зарегистрированных сотрудников FIB Forms · {users.length} записей
+          </p>
           <div className="ph-rule" />
         </header>
 
+        {/* ── ПАНЕЛЬ ФИЛЬТРОВ ── */}
+        {users.length > 0 && (
+          <section className="filters">
+            <div className="filter-row">
+              <div className="search-wrap">
+                <span className="search-icon">⌕</span>
+                <input
+                  className="search-input"
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Поиск по нику, юзернейму или Discord ID..."
+                />
+                {search && (
+                  <button className="search-clear" onClick={() => setSearch('')} title="Очистить">
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <select
+                className="filter-select"
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+              >
+                <option value="">ВСЕ ОТДЕЛЫ</option>
+                {availableDepts.map(d => (
+                  <option key={d} value={d}>{DEPT_SHORT[d] || d}</option>
+                ))}
+              </select>
+
+              <select
+                className="filter-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                {SORT_OPTIONS.map(o => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
+
+              {hasFilters && (
+                <button className="filter-reset" onClick={resetFilters}>
+                  ✕ СБРОС
+                </button>
+              )}
+            </div>
+
+            <div className="filter-meta">
+              <span className="fm-found">
+                НАЙДЕНО: <strong>{visibleUsers.length}</strong> / {users.length}
+              </span>
+              {deptFilter && (
+                <span className="fm-chip">ОТДЕЛ: {DEPT_SHORT[deptFilter] || deptFilter}</span>
+              )}
+              {search && <span className="fm-chip">ПОИСК: «{search}»</span>}
+            </div>
+          </section>
+        )}
+
+        {/* ── РЕЕСТР ── */}
         {users.length === 0 ? (
           <section className="panel">
             <div className="panel-body center">
@@ -43,15 +169,28 @@ export default function Members() {
               <p className="muted">РЕЕСТР ПУСТ</p>
             </div>
           </section>
+        ) : visibleUsers.length === 0 ? (
+          <section className="panel">
+            <div className="panel-body center">
+              <div className="empty-icon">//</div>
+              <p className="muted">НИЧЕГО НЕ НАЙДЕНО</p>
+              <button className="empty-reset" onClick={resetFilters}>СБРОСИТЬ ФИЛЬТРЫ</button>
+            </div>
+          </section>
         ) : (
           <div className="roster">
-            {users.map((user, i) => {
+            {visibleUsers.map((user, i) => {
               const hasCustomImage = user.profileCustom?.type === 'image' && user.profileCustom?.url;
+              const presetId = user.profileCustom?.type === 'preset' ? user.profileCustom.presetId : null;
               const dept = DEPT_SHORT[user.department] || user.department || '—';
+
+              let cardClass = 'member';
+              if (presetId && presetId !== 'default') cardClass += ` member-preset-${presetId}`;
+
               return (
                 <article
                   key={user.userId}
-                  className="member"
+                  className={cardClass}
                   style={{ animationDelay: `${i * 0.02}s` }}
                 >
                   {hasCustomImage && (
@@ -132,6 +271,137 @@ export default function Members() {
           margin: 18px 0 0;
         }
 
+        /* ═══ ПАНЕЛЬ ФИЛЬТРОВ ═══ */
+        .filters {
+          background: #0c0c0c;
+          border: 1px solid #1f1f1f;
+          padding: 16px 18px;
+          margin-bottom: 18px;
+          animation: cardIn 0.4s ease;
+        }
+        .filter-row {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .search-wrap {
+          position: relative;
+          flex: 1 1 260px;
+          min-width: 200px;
+        }
+        .search-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #555;
+          font-size: 15px;
+          pointer-events: none;
+        }
+        .search-input {
+          width: 100%;
+          padding: 11px 36px 11px 34px;
+          background: #060606;
+          border: 1px solid #262626;
+          color: #fff;
+          border-radius: 0;
+          font-size: 13.5px;
+          font-family: inherit;
+          outline: none;
+          box-sizing: border-box;
+          transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: #fff; }
+        .search-input::placeholder { color: #444; }
+        .search-clear {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 22px;
+          height: 22px;
+          background: transparent;
+          border: none;
+          color: #666;
+          cursor: pointer;
+          font-size: 13px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.18s;
+        }
+        .search-clear:hover { color: #fff; background: #222; }
+
+        .filter-select {
+          padding: 11px 34px 11px 14px;
+          background: #060606;
+          border: 1px solid #262626;
+          color: #fff;
+          border-radius: 0;
+          font-size: 12px;
+          font-family: ui-monospace, monospace;
+          letter-spacing: 1.4px;
+          text-transform: uppercase;
+          cursor: pointer;
+          appearance: none;
+          background-image: linear-gradient(45deg, transparent 50%, #666 50%),
+                            linear-gradient(135deg, #666 50%, transparent 50%);
+          background-position: calc(100% - 16px) center, calc(100% - 11px) center;
+          background-size: 5px 5px, 5px 5px;
+          background-repeat: no-repeat;
+          outline: none;
+          transition: border-color 0.2s;
+          flex-shrink: 0;
+        }
+        .filter-select:focus { border-color: #fff; }
+        .filter-select option { background: #0c0c0c; color: #fff; }
+
+        .filter-reset {
+          padding: 11px 14px;
+          background: transparent;
+          border: 1px solid #553030;
+          color: #ff8080;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1.8px;
+          text-transform: uppercase;
+          transition: all 0.18s;
+          flex-shrink: 0;
+        }
+        .filter-reset:hover {
+          background: #ff4444;
+          border-color: #ff4444;
+          color: #fff;
+        }
+
+        .filter-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px dashed #1f1f1f;
+          font-family: ui-monospace, monospace;
+          font-size: 10.5px;
+          letter-spacing: 1.4px;
+        }
+        .fm-found { color: #888; }
+        .fm-found strong { color: #fff; font-size: 12px; }
+        .fm-chip {
+          padding: 3px 9px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid #2a2a2a;
+          color: #ccc;
+          text-transform: uppercase;
+          font-size: 10px;
+        }
+
+        /* ═══ РЕЕСТР ═══ */
         .roster {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -152,6 +422,26 @@ export default function Members() {
           background: #131313;
           border-color: #fff;
           transform: translateY(-3px);
+          box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
+        }
+
+        /* ── Пресеты карточек ── */
+        .member-preset-blue {
+          background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+          border-color: #3b82f6;
+        }
+        .member-preset-purple {
+          background: linear-gradient(135deg, #4c1d95, #a855f7);
+          border-color: #a855f7;
+        }
+        .member-preset-green {
+          background: linear-gradient(135deg, #065f46, #10b981);
+          border-color: #10b981;
+        }
+        .member-preset-blue:hover,
+        .member-preset-purple:hover,
+        .member-preset-green:hover {
+          border-color: #fff;
           box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
         }
 
@@ -239,6 +529,7 @@ export default function Members() {
         .m-status.is-active { color: #8ee08e; }
         .m-status.is-banned { color: #ff8080; }
 
+        /* ── ПУСТЫЕ СОСТОЯНИЯ ── */
         .panel {
           background: #0c0c0c;
           border: 1px solid #1f1f1f;
@@ -259,6 +550,20 @@ export default function Members() {
           margin: 0;
           text-transform: uppercase;
         }
+        .empty-reset {
+          margin-top: 18px;
+          padding: 10px 18px;
+          background: transparent;
+          border: 1px solid #333;
+          color: #ccc;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 1.8px;
+          text-transform: uppercase;
+          transition: all 0.18s;
+        }
+        .empty-reset:hover { background: #fff; border-color: #fff; color: #000; }
 
         .loading-line {
           text-align: center;
@@ -280,6 +585,10 @@ export default function Members() {
           .roster { grid-template-columns: 1fr; gap: 10px; }
           .member-inner { padding: 14px 14px 10px; }
           .member-foot { padding: 9px 14px; }
+          .filter-row { gap: 8px; }
+          .search-wrap { flex: 1 1 100%; }
+          .filter-select { flex: 1 1 calc(50% - 4px); }
+          .filter-reset { flex: 1 1 100%; }
         }
       `}</style>
     </Layout>
