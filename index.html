@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VANDAL — Majestic RP | Discord Bot</title>
+<meta name="description" content="VANDAL — дружная фама на Majestic RP. Тикет-система, контракты, выплаты, повышения и Капт-Состав прямо в Discord." />
+<link rel="icon" type="image/png" href="assets/logo.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-2: #111111;
+    --fg: #f5f5f5;
+    --fg-dim: #a3a3a3;
+    --line: #1f1f1f;
+    --line-2: #2a2a2a;
+    --accent: #ffffff;
+    --shadow: 0 0 60px rgba(255,255,255,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Грит/шум поверх фона — добавляет «типографский» гранж-эффект */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.055 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    opacity: 0.6;
+    mix-blend-mode: overlay;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ==================== NAV ==================== */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,10,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 3px;
+  }
+  .nav-brand img { width: 34px; height: 34px; object-fit: contain; filter: brightness(0) invert(1); }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--fg-dim);
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--fg); }
+
+  /* ==================== HERO ==================== */
+  .hero {
+    position: relative;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-bg {
+    position: absolute;
+    inset: -10%;
+    background:
+      radial-gradient(circle at 50% 40%, rgba(255,255,255,0.06) 0%, transparent 55%),
+      url('assets/vandal-grunge.png') center/cover no-repeat;
+    opacity: 0.10;
+    filter: contrast(1.4) grayscale(1);
+    z-index: 0;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, var(--bg) 100%);
+    z-index: 1;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 40px 24px;
+  }
+  .hero-logo {
+    width: 220px;
+    height: auto;
+    filter: brightness(0) invert(1) drop-shadow(0 0 40px rgba(255,255,255,0.15));
+    margin-bottom: 24px;
+    animation: fadeUp 0.9s ease both;
+  }
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 12vw, 140px);
+    letter-spacing: 8px;
+    line-height: 0.9;
+    margin-bottom: 18px;
+    animation: fadeUp 0.9s 0.1s ease both;
+  }
+  .hero .subtitle {
+    font-size: clamp(13px, 1.6vw, 16px);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    margin-bottom: 40px;
+    animation: fadeUp 0.9s 0.2s ease both;
+  }
+  .hero .tagline {
+    max-width: 620px;
+    margin: 0 auto 44px;
+    color: var(--fg-dim);
+    font-size: 15px;
+    animation: fadeUp 0.9s 0.3s ease both;
+  }
+  .hero-buttons {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.9s 0.4s ease both;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    border: 1px solid var(--line-2);
+    background: transparent;
+    color: var(--fg);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .25s ease;
+  }
+  .btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(255,255,255,0.1);
+  }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn.primary:hover { background: transparent; color: var(--fg); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ==================== SECTION BASE ==================== */
+  section { padding: 100px 0; border-bottom: 1px solid var(--line); position: relative; z-index: 2; }
+
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--fg-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(38px, 5vw, 62px);
+    letter-spacing: 4px;
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+  .section-desc {
+    color: var(--fg-dim);
+    max-width: 620px;
+    font-size: 15px;
+    margin-bottom: 60px;
+  }
+
+  /* ==================== ABOUT ==================== */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .about-text p { color: var(--fg-dim); margin-bottom: 18px; }
+  .about-text strong { color: var(--fg); font-weight: 600; }
+  .about-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .stat {
+    background: var(--bg);
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+
+  /* ==================== FEATURES ==================== */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .feature {
+    background: var(--bg);
+    padding: 40px 32px;
+    position: relative;
+    transition: background .25s;
+  }
+  .feature:hover { background: var(--bg-2); }
+  .feature-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--fg-dim);
+    margin-bottom: 22px;
+  }
+  .feature h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .feature p { color: var(--fg-dim); font-size: 14px; }
+
+  /* ==================== RULES ==================== */
+  .rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .rule {
+    background: var(--bg);
+    padding: 26px 32px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    transition: background .2s;
+  }
+  .rule:hover { background: var(--bg-2); }
+  .rule-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--fg-dim);
+    min-width: 40px;
+    line-height: 1;
+  }
+  .rule-text { color: var(--fg); font-size: 15px; }
+
+  /* ==================== STEPS ==================== */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .step {
+    background: var(--bg);
+    padding: 38px 28px;
+    position: relative;
+  }
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px;
+    line-height: 1;
+    color: rgba(255,255,255,0.06);
+    position: absolute;
+    top: 18px;
+    right: 22px;
+  }
+  .step h4 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .step p { color: var(--fg-dim); font-size: 14px; position: relative; }
+
+  /* ==================== FAQ ==================== */
+  .faq { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  details {
+    background: var(--bg);
+    padding: 22px 28px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  details[open] { background: var(--bg-2); }
+  details summary {
+    list-style: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 1.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after {
+    content: '+';
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 300;
+    transition: transform .3s;
+    color: var(--fg-dim);
+  }
+  details[open] summary::after { content: '−'; color: var(--fg); }
+  details p {
+    color: var(--fg-dim);
+    margin-top: 16px;
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+
+  /* ==================== CTA ==================== */
+  .cta {
+    text-align: center;
+    padding: 130px 24px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05), transparent 60%);
+  }
+  .cta-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(44px, 7vw, 88px);
+    letter-spacing: 6px;
+    line-height: 1;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .cta p { color: var(--fg-dim); margin-bottom: 36px; position: relative; z-index: 1; }
+  .cta .btn { position: relative; z-index: 1; }
+
+  /* ==================== FOOTER ==================== */
+  footer {
+    padding: 48px 0 40px;
+    text-align: center;
+    color: var(--fg-dim);
+    font-size: 13px;
+    position: relative;
+    z-index: 2;
+  }
+  footer .brand {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--fg);
+    margin-bottom: 14px;
+  }
+  footer .links { display: flex; gap: 24px; justify-content: center; margin-bottom: 22px; flex-wrap: wrap; }
+  footer .links a { color: var(--fg-dim); transition: color .2s; }
+  footer .links a:hover { color: var(--fg); }
+  footer .copy { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; opacity: 0.55; }
+
+  /* ==================== RESPONSIVE ==================== */
+  @media (max-width: 800px) {
+    .nav-links { display: none; }
+    .about-grid { grid-template-columns: 1fr; gap: 40px; }
+    section { padding: 70px 0; }
+    .hero-logo { width: 150px; }
+    .rule { padding: 22px 20px; }
+    .feature { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== NAV ==================== -->
+<nav>
+  <div class="container nav-inner">
+    <a href="#" class="nav-brand">
+      <img src="assets/logo.png" alt="VANDAL" />
+      VANDAL
+    </a>
+    <div class="nav-links">
+      <a href="#about">О фаме</a>
+      <a href="#features">Возможности</a>
+      <a href="#rules">Правила</a>
+      <a href="#how">Как вступить</a>
+      <a href="#faq">FAQ</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<header class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <img src="assets/logo.png" alt="VANDAL" class="hero-logo" />
+    <h1>VANDAL</h1>
+    <div class="subtitle">Majestic RP · Discord Bot</div>
+    <p class="tagline">
+      Надоело играть одному? Залетай в VANDAL — дружная фама,
+      где можно найти компанию, пообщаться и вместе участвовать в движах.
+    </p>
+    <div class="hero-buttons">
+      <a href="#how" class="btn primary">Вступить в фаму</a>
+      <a href="#features" class="btn">Что умеет бот</a>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== ABOUT ==================== -->
+<section id="about">
+  <div class="container">
+    <div class="section-tag">// 01 — О нас</div>
+    <h2 class="section-title">МЫ — VANDAL</h2>
+    <p class="section-desc">
+      Мы собрали коллектив, в котором каждый найдёт своё место — от новичков до заядлых
+      стрелков Капт-Состава.
+    </p>
+
+    <div class="about-grid">
+      <div class="about-text">
+        <p>
+          <strong>VANDAL</strong> — это не просто фама. Это продуманная система
+          с внутренними инструментами: рекрутингом, контрактами, выплатами и
+          повышениями. Всё собрано в <strong>одном Discord-боте</strong>, который
+          делает жизнь состава прозрачной и удобной.
+        </p>
+        <p>
+          Хочешь инвайт — создаёшь тикет, рекрутёр берёт заявку и ведёт тебя до принятия.
+          Выполнил контракт — подтвердил доказательства и получил деньги. Захотел
+          апнуться — отправил заявку на повышение. Всё под контролем.
+        </p>
+        <p>
+          И главное — у нас <strong>не токсично</strong>. Поможем новичку освоиться,
+          подскажем, куда обратиться за блатом, вместе залетим на движ.
+        </p>
+      </div>
+
+      <div class="about-stats">
+        <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">Приём заявок</div></div>
+        <div class="stat"><div class="stat-num">5+</div><div class="stat-label">Инструментов бота</div></div>
+        <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Прозрачные выплаты</div></div>
+        <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Движа вместе</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FEATURES ==================== -->
+<section id="features">
+  <div class="container">
+    <div class="section-tag">// 02 — Возможности бота</div>
+    <h2 class="section-title">СИСТЕМА VANDAL</h2>
+    <p class="section-desc">
+      Всё, что раньше решалось вручную — теперь работает за пару кликов.
+    </p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-num">01</div>
+        <h3>Тикет-система</h3>
+        <p>Подача заявки через кнопку, назначение рекрутёра, обзвон в приватном голосовом канале и внутренний текстовый тикет для обсуждения.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">02</div>
+        <h3>Контракты</h3>
+        <p>Хайстафф создаёт контракты с условиями, ценой и дедлайном. Участники выполняют и отправляют доказательства на проверку.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">03</div>
+        <h3>Выплаты рекрутам</h3>
+        <p>За каждого приглашённого — 10 000 $. При высоком ранге реферала — дополнительно 5 000 $. Выплаты каждое воскресенье.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">04</div>
+        <h3>Выплаты за работу</h3>
+        <p>Выполнил задачу для фамы — запроси выплату. ДепЛид или выше рассматривает и одобряет в один клик.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">05</div>
+        <h3>Повышения</h3>
+        <p>Заявка с описанием проделанной работы уходит прямо в канал руководства. Хайстафф одобряет или отклоняет с причиной.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">06</div>
+        <h3>Капт-Состав</h3>
+        <p>Отдельная система заявок в капт с полями про опыт, часы и откат стрельбы. Плюс команда <code>/capt-action</code> для сборов.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== RULES ==================== -->
+<section id="rules">
+  <div class="container">
+    <div class="section-tag">// 03 — Правила</div>
+    <h2 class="section-title">КОДЕКС VANDAL</h2>
+    <p class="section-desc">
+      Короткий список. Всё остальное — по-человечески.
+    </p>
+
+    <div class="rules-list">
+      <div class="rule"><div class="rule-num">01</div><div class="rule-text">Уважение к сокланам. Без токсика, оскорблений и слива движей.</div></div>
+      <div class="rule"><div class="rule-num">02</div><div class="rule-text">Поставил ник по форме: <strong>Ранг | Имя | Static ID</strong>.</div></div>
+      <div class="rule"><div class="rule-num">03</div><div class="rule-text">Активность. Заходишь — отписывайся в движах, не будь балластом.</div></div>
+      <div class="rule"><div class="rule-num">04</div><div class="rule-text">Доказательства по контрактам и работам — реальные. Фейк = отказ + риск вылета.</div></div>
+      <div class="rule"><div class="rule-num">05</div><div class="rule-text">Выплаты рекрутам — только за рефералов, отсидевших 7+ дней в фаме.</div></div>
+      <div class="rule"><div class="rule-num">06</div><div class="rule-text">Спорные ситуации — к ДепЛид или Овнеру. Не решаем в общем чате.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== HOW TO JOIN ==================== -->
+<section id="how">
+  <div class="container">
+    <div class="section-tag">// 04 — Как вступить</div>
+    <h2 class="section-title">4 ШАГА ДО ИНВАЙТА</h2>
+    <p class="section-desc">
+      От подачи заявки до принятия — обычно не больше суток.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h4>Зайди на сервер</h4>
+        <p>Перейди по инвайт-ссылке Discord и найди канал с панелью подачи заявок.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h4>Нажми «Создать тикет»</h4>
+        <p>Заполни короткую анкету: ник, статик, возраст, цель вступления, откуда узнал.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h4>Пройди обзвон</h4>
+        <p>Рекрутёр возьмёт твою заявку и позовёт на приватный голосовой обзвон.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h4>Получи инвайт</h4>
+        <p>После одобрения тебе выдадут роль и пригласят в фаму. Поставь ник и играй.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FAQ ==================== -->
+<section id="faq">
+  <div class="container">
+    <div class="section-tag">// 05 — FAQ</div>
+    <h2 class="section-title">ЧАСТЫЕ ВОПРОСЫ</h2>
+    <p class="section-desc">Не нашёл ответ — спроси в Discord.</p>
+
+    <div class="faq">
+      <details>
+        <summary>Сколько ждать рассмотрения заявки?</summary>
+        <p>Обычно — от нескольких часов до суток. Рекрутёры онлайн круглосуточно, заявка сразу уходит им в канал.</p>
+      </details>
+      <details>
+        <summary>Какие требования для вступления?</summary>
+        <p>Адекватность, микрофон (для обзвона) и желание играть. Возраст и опыт — обсуждаются индивидуально, жёстких рамок нет.</p>
+      </details>
+      <details>
+        <summary>Как работают контракты?</summary>
+        <p>Хайстафф публикует контракт с условиями, ценой и дедлайном. Любой участник может взять его, выполнить и отправить доказательства. После проверки — выплата.</p>
+      </details>
+      <details>
+        <summary>Когда проходят выплаты рекрутам?</summary>
+        <p>Каждое воскресенье. Запрос создаётся через кнопку на панели, ДепЛид рассматривает и одобряет.</p>
+      </details>
+      <details>
+        <summary>Можно ли подать заявку повторно после отказа?</summary>
+        <p>Да. Причину отказа всегда указывают. Устрани её — и подавай снова.</p>
+      </details>
+      <details>
+        <summary>Хочу попасть в Капт-Состав. Что нужно?</summary>
+        <p>Подай заявку через панель. Укажи опыт, часы в GTA 5 и откат стрельбы (Сайга + Спец. Карабин). Руководство рассмотрит индивидуально.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CTA ==================== -->
+<section class="cta">
+  <h2 class="cta-title">ГОТОВ К ДВИЖУ?</h2>
+  <p>Залетай в VANDAL — тут тебя ждут.</p>
+  <a href="https://discord.gg/ВАШ_ИНВАЙТ" class="btn primary" target="_blank" rel="noopener">Вступить в Discord</a>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer>
+  <div class="container">
+    <div class="brand">VANDAL</div>
+    <div class="links">
+      <a href="https://discord.gg/ВАШ_ИНВАЙТ" target="_blank" rel="noopener">Discord</a>
+      <a href="https://github.com/ВАШ_НИК/vandal-bot" target="_blank" rel="noopener">GitHub</a>
+      <a href="#about">О фаме</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="copy">© <span id="year"></span> VANDAL · Majestic RP · Made with 🖤</div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
