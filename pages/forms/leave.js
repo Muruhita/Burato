@@ -16,7 +16,6 @@ const POSITIONS = [
 export default function LeaveForm() {
   const router = useRouter();
   const [nickname, setNickname] = useState('');
-  const [leaveType, setLeaveType] = useState('IC');
   const [formData, setFormData] = useState({
     department: '',
     position: '',
@@ -54,7 +53,12 @@ export default function LeaveForm() {
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'leave', leaveType, fullName: nickname, ...formData })
+        body: JSON.stringify({
+          type: 'leave',
+          leaveType: 'OOC', // всегда OOC
+          fullName: nickname,
+          ...formData
+        })
       });
       if (res.ok) {
         setSuccess(true);
@@ -88,9 +92,9 @@ export default function LeaveForm() {
         <div className="form-shell">
           <header className="form-head">
             <div className="fh-stamp">FORM-012 · PERSONNEL</div>
-            <h1 className="fh-title">Отпуск</h1>
+            <h1 className="fh-title">Отпуск (OOC)</h1>
             <p className="fh-sub">
-              Заявка на IC или OOC отпуск. Укажите период, отдел и звание.
+              Заявка на OOC-отпуск. Укажите период, отдел и звание.
             </p>
             <div className="fh-rule" />
           </header>
@@ -98,21 +102,9 @@ export default function LeaveForm() {
           <form onSubmit={handleSubmit} className="form-body">
             <div className="field-block">
               <label className="lbl">Тип отпуска</label>
-              <div className="type-switch">
-                <button
-                  type="button"
-                  className={leaveType === 'IC' ? 'active' : ''}
-                  onClick={() => setLeaveType('IC')}
-                >
-                  IC ОТПУСК
-                </button>
-                <button
-                  type="button"
-                  className={leaveType === 'OOC' ? 'active' : ''}
-                  onClick={() => setLeaveType('OOC')}
-                >
-                  OOC ОТПУСК
-                </button>
+              <div className="type-static">
+                <span className="type-dot" />
+                <span className="type-text">OOC ОТПУСК</span>
               </div>
             </div>
 
@@ -204,37 +196,38 @@ export default function LeaveForm() {
         </div>
       </div>
 
-      <SubmitOverlay show={success} text="Заявка на отпуск отправлена!" />
+      <SubmitOverlay show={success} text="Заявка на OOC-отпуск отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
 
       <style jsx>{`
-        .type-switch {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0;
-          border: 1px solid #262626;
+        .type-static {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 13px 16px;
           background: #060606;
-        }
-        .type-switch button {
-          padding: 13px 14px;
-          background: transparent;
-          border: none;
-          color: #777;
-          cursor: pointer;
+          border: 1px solid #262626;
           font-family: ui-monospace, monospace;
           font-size: 11px;
           letter-spacing: 2px;
-          transition: all 0.18s;
+          color: #fff;
           text-transform: uppercase;
         }
-        .type-switch button:first-child {
-          border-right: 1px solid #262626;
+        .type-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #4ade80;
+          box-shadow: 0 0 8px rgba(74, 222, 128, 0.7);
+          animation: pulseDot 2s ease-in-out infinite;
+          flex-shrink: 0;
         }
-        .type-switch button:hover { color: #fff; }
-        .type-switch button.active {
-          background: #fff;
-          color: #000;
+        .type-text {
           font-weight: 800;
+        }
+        @keyframes pulseDot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.5; transform: scale(0.85); }
         }
 
         .date-row {
