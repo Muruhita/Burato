@@ -155,7 +155,11 @@ const UKMB_ROLES = [DIRECTOR_ROLE, DEP_DIRECTOR_ROLE];
 // ─────────────────────────────────────────────────────────────
 // 🎯 Точечная блокировка отдельных форм (ДБ, УКМБ)
 // ─────────────────────────────────────────────────────────────
-const TYPE_TOGGLES = ['db', 'ukmb'];
+const TYPE_TOGGLES = [
+  'promotion', 'transfer', 'report', 'highrank', 'resignation', 
+  'reinstatement', 'transferToFib', 'weaponRequest', 'withdrawal', 
+  'hiring', 'claim', 'leave', 'db', 'ukmb', 'exam'
+];
 
 // ─────────────────────────────────────────────────────────────
 // 🎖 Подбор ролей для Leave по званию
