@@ -468,7 +468,23 @@ export default async function handler(req, res) {
     if (dept.roleId2) roleMentions += `<@&${dept.roleId2}>`;
   } else if (type === 'transfer') {
     const deptKey = targetDepartment;
+  } else if (type === 'transfer') {
+    const deptKey = targetDepartment;
     if (!deptKey || !TRANSFER_WEBHOOKS[deptKey]) return res.status(400).json({ error: 'Некорректный отдел' });
+
+    // Нельзя перевестись в тот же отдел
+    if (formData.currentDepartment && formData.currentDepartment === targetDepartment) {
+      return res.status(400).json({ error: 'Нельзя перевестись в тот же отдел.' });
+    }
+
+    // FA — только с ранга 5+
+    if (targetDepartment === 'fa') {
+      const rankNum = parseInt(formData.rank, 10);
+      if (isNaN(rankNum) || rankNum < 5) {
+        return res.status(400).json({ error: 'Для перевода в FA необходим ранг 5 или выше.' });
+      }
+    }
+
     webhookUrl = TRANSFER_WEBHOOKS[deptKey];
     if (!webhookUrl) return res.status(500).json({ error: `Вебхук для перевода в "${deptKey}" не настроен` });
     const deptInfo = DEPARTMENTS[targetDepartment];
@@ -494,10 +510,14 @@ export default async function handler(req, res) {
   // ─────────────────────────────────────────────────
   // 🧩 10. Сборка embed
   // ─────────────────────────────────────────────────
+  const avatarUrl = user.avatar
+    ? `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.png`
+    : `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 5}.png`;
+
   const embed = {
     title: getFormTitle(type, department, targetDepartment),
     color: getFormColor(type),
-    author: { name: username, icon_url: `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.png` },
+    author: { name: username, icon_url: avatarUrl },
     fields: buildFields(type, department, targetDepartment, formData, userId, username),
     footer: { text: 'Majestic FIB Forms • ' + new Date().toLocaleDateString('ru-RU') },
     timestamp: new Date().toISOString()
@@ -727,7 +747,6 @@ function buildFields(type, department, targetDepartment, data, userId, username)
 
     if (targetDepartment === 'cid') {
       fields.push(
-        { name: '📋 Чем занимается CID/DB?', value: data.cidWhatIs || 'Не указано', inline: false },
         { name: '📋 Опыт работы в CID/DB?', value: data.cidExperience || 'Не указано', inline: false },
         { name: '📋 Примеры работ', value: data.cidExamples || 'Не указано', inline: false },
         { name: '📋 Серверы с CID/DB', value: data.cidServers || 'Не указано', inline: false },
