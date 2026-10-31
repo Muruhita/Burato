@@ -2,8 +2,21 @@ import Layout from '../components/Layout';
 import { useState, useEffect, useMemo } from 'react';
 
 const FORM_TOGGLES = [
+  { key: 'promotion', label: 'Повышение', icon: '⬆' },
+  { key: 'transfer', label: 'Перевод в отдел', icon: '⤳' },
+  { key: 'report', label: 'Отчёт на повышение', icon: '▤' },
+  { key: 'highrank', label: 'Отчёт HR', icon: '★' },
+  { key: 'resignation', label: 'Увольнение', icon: '✕' },
+  { key: 'reinstatement', label: 'Восстановление', icon: '↻' },
+  { key: 'transferToFib', label: 'Перевод в FIB', icon: '⛨' },
+  { key: 'weaponRequest', label: 'Спец. вооружение', icon: '⌖' },
+  { key: 'withdrawal', label: 'Снятие ЧС', icon: '⚿' },
+  { key: 'hiring', label: 'Трудоустройство', icon: '⎔' },
+  { key: 'claim', label: 'Жалоба', icon: '!' },
+  { key: 'leave', label: 'Отпуск', icon: '◐' },
   { key: 'db', label: 'Запрос на ДБ', icon: '📅' },
   { key: 'ukmb', label: 'Запрос на УКМБ', icon: '🎓' },
+  { key: 'exam', label: 'Запрос на экзамен', icon: '◇' },
 ];
 
 export default function AdminPanel() {
