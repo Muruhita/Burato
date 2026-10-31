@@ -68,7 +68,7 @@ const EMBED_IMAGE_HOSTS = [
 // ─────────────────────────────────────────────────────────────
 // 🧵 Форум отпусков — вебхук + ID веток
 // ─────────────────────────────────────────────────────────────
-const FORUM_LEAVE_WEBHOOK = process.env.WEBHOOK_LEAVE_FORUM;
+const FORUM_LEAVE_WEBHOOK = process.env.WEBHOOK_LEAVE;
 
 const LEAVE_THREADS = {
   IC:  '1479695882302787624',
