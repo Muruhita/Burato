@@ -1,6 +1,7 @@
 import redis from '../../../lib/redis';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
+import redis, { scanKeys } from '../../../lib/redis';
 
 // Извлекаем статик из ника: последнее число из 4–8 цифр
 function extractStatic(nickname) {
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const keys = await redis.keys('nickname:*');
+    const keys = await scanKeys('nickname:*');
     if (!keys.length) return res.status(200).json({ duplicates: [] });
 
     const userIds = keys.map(k => k.replace('nickname:', ''));
