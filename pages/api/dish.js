@@ -1,6 +1,7 @@
 // pages/api/dish.js
 import redis from '../../lib/redis';
 import { verifyToken } from '../../lib/discord';
+import { isSafeUrl } from '../../lib/urlValidator';
 
 const EDITOR_ID = '1018113109346504744';
 
@@ -32,20 +33,31 @@ export default async function handler(req, res) {
     const { links, text } = req.body;
 
     // Валидация и сохранение ссылок
-    if (Array.isArray(links)) {
-      const clean = links
-        .map(l => ({
-          label: String(l.label || '').trim(),
-          url: String(l.url || '').trim()
-        }))
-        .filter(l => l.label.length > 0 && l.url.length > 0);
+if (Array.isArray(links)) {
+  const clean = [];
+  for (const l of links) {
+    const label = String(l.label || '').trim().slice(0, 120);
+    const url = String(l.url || '').trim();
 
-      if (clean.length === 0) {
-        await redis.del('dish:links');
-      } else {
-        await redis.set('dish:links', JSON.stringify(clean));
-      }
+    if (!label || !url) continue;
+
+    // Жёсткая проверка: только http/https, только публичные хосты.
+    // Блокирует javascript:, data:, file:, приватные IP, SSRF.
+    if (!isSafeUrl(url, { maxLength: 2000 })) {
+      return res.status(400).json({
+        error: `Недопустимая ссылка: ${label}. Разрешены только http/https с публичных хостов.`
+      });
     }
+
+    clean.push({ label, url });
+  }
+
+  if (clean.length === 0) {
+    await redis.del('dish:links');
+  } else {
+    await redis.set('dish:links', JSON.stringify(clean));
+  }
+}
 
     // Сохранение текста
     if (typeof text === 'string') {
