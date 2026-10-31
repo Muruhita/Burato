@@ -2,10 +2,8 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
-import DraftBanner from '../../components/DraftBanner';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useFormDraft } from '../../hooks/useFormDraft';
 
 export default function HiringForm() {
   const router = useRouter();
@@ -21,21 +19,6 @@ export default function HiringForm() {
     age: '', experience: '', lawKnowledge: '',
     passportScreenshot: '', militaryId: '', medicalCertificates: ''
   });
-
-  // 🆕 Черновик
-  const draft = useFormDraft(
-    'draft:hiring',
-    { nickname, ...formData },
-    {
-      enabled: !banned,
-      onLoad: (saved) => {
-        if (!saved) return;
-        if (saved.nickname !== undefined) setNickname(saved.nickname);
-        const { nickname: _n, ...rest } = saved;
-        setFormData(prev => ({ ...prev, ...rest }));
-      }
-    }
-  );
 
   useEffect(() => {
     fetch('/api/profile')
@@ -54,18 +37,9 @@ export default function HiringForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.passportScreenshot) {
-      alert('⚠️ Загрузите скриншот паспорта.');
-      return;
-    }
-    if (!formData.militaryId) {
-      alert('⚠️ Загрузите военный билет.');
-      return;
-    }
-    if (!formData.medicalCertificates) {
-      alert('⚠️ Загрузите медицинские справки.');
-      return;
-    }
+    if (!formData.passportScreenshot) { alert('⚠️ Загрузите скриншот паспорта.'); return; }
+    if (!formData.militaryId) { alert('⚠️ Загрузите военный билет.'); return; }
+    if (!formData.medicalCertificates) { alert('⚠️ Загрузите медицинские справки.'); return; }
 
     setSubmitting(true);
     try {
@@ -75,7 +49,6 @@ export default function HiringForm() {
         body: JSON.stringify({ type: 'hiring', fullName: nickname, ...formData })
       });
       if (res.ok) {
-        draft.clear(); // 🆕 стираем черновик
         setSuccess(true);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
@@ -104,8 +77,6 @@ export default function HiringForm() {
       <div className="form-page">
         <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
 
-        <DraftBanner {...draft} />
-
         <div className="form-shell">
           <header className="form-head">
             <div className="fh-stamp">FORM-010 · RECRUIT</div>
@@ -119,82 +90,33 @@ export default function HiringForm() {
           <form onSubmit={handleSubmit} className="form-body">
             <div className="field-block">
               <label className="lbl">Имя Фамилия + Статик</label>
-              <input
-                className="field"
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                required
-                placeholder="Name Surname | 123456"
-              />
+              <input className="field" type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} required placeholder="Name Surname | 123456" />
             </div>
 
             <div className="field-block">
               <label className="lbl">Возраст (RP)</label>
-              <input
-                className="field"
-                type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                required
-                placeholder="22"
-              />
+              <input className="field" type="number" value={formData.age} onChange={(e) => setFormData({ ...formData, age: e.target.value })} required placeholder="22" />
             </div>
 
             <div className="field-block">
               <label className="lbl">Опыт работы</label>
-              <textarea
-                className="field"
-                value={formData.experience}
-                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                required
-                rows="3"
-                placeholder="Были ли в других организациях? Опишите..."
-              />
+              <textarea className="field" value={formData.experience} onChange={(e) => setFormData({ ...formData, experience: e.target.value })} required rows="3" placeholder="Были ли в других организациях? Опишите..." />
             </div>
 
             <div className="field-block">
               <label className="lbl">Знание законов RP (1–10)</label>
-              <select
-                className="field"
-                value={formData.lawKnowledge}
-                onChange={(e) => setFormData({ ...formData, lawKnowledge: e.target.value })}
-                required
-              >
+              <select className="field" value={formData.lawKnowledge} onChange={(e) => setFormData({ ...formData, lawKnowledge: e.target.value })} required>
                 <option value="">-- ОЦЕНИТЕ ЗНАНИЯ --</option>
-                {['1','2','3','4','5','6','7','8','9','10'].map(n => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
+                {['1','2','3','4','5','6','7','8','9','10'].map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
 
-            <ImageUploader
-              label="Скриншот паспорта"
-              value={formData.passportScreenshot}
-              onChange={(url) => setFormData(prev => ({ ...prev, passportScreenshot: url }))}
-              allowManualUrl
-            />
-
-            <ImageUploader
-              label="Военный билет"
-              value={formData.militaryId}
-              onChange={(url) => setFormData(prev => ({ ...prev, militaryId: url }))}
-              allowManualUrl
-            />
-
-            <ImageUploader
-              label="Медицинские справки"
-              value={formData.medicalCertificates}
-              onChange={(url) => setFormData(prev => ({ ...prev, medicalCertificates: url }))}
-              allowManualUrl
-            />
+            <ImageUploader label="Скриншот паспорта" value={formData.passportScreenshot} onChange={(url) => setFormData(prev => ({ ...prev, passportScreenshot: url }))} allowManualUrl />
+            <ImageUploader label="Военный билет" value={formData.militaryId} onChange={(url) => setFormData(prev => ({ ...prev, militaryId: url }))} allowManualUrl />
+            <ImageUploader label="Медицинские справки" value={formData.medicalCertificates} onChange={(url) => setFormData(prev => ({ ...prev, medicalCertificates: url }))} allowManualUrl />
 
             <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting
-                ? <><span className="btn-spinner" /> ОТПРАВКА...</>
-                : banned
-                  ? '🚫 ДОСТУП ЗАБЛОКИРОВАН'
-                  : '→ ОТПРАВИТЬ ЗАЯВКУ'}
+              {submitting ? <><span className="btn-spinner" /> ОТПРАВКА...</> : banned ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' : '→ ОТПРАВИТЬ ЗАЯВКУ'}
             </button>
           </form>
         </div>
