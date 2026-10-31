@@ -1,23 +1,7 @@
 import Layout from '../components/Layout';
 import { useState, useEffect } from 'react';
 import { RANKS } from '../lib/ranks';
-
-const DEPARTMENTS = [
-  { id: 'ib',       name: 'IB (Intelligence Branch)' },
-  { id: 'cid',      name: 'CID (Criminal Investigation Department)' },
-  { id: 'fa',       name: 'FA (Free Agent)' },
-  { id: 'hrt',      name: 'HRT (Hostage Rescue Team)' },
-  { id: 'atf',      name: 'ATF (Anti Terrorism Force)' },
-  { id: 'af',       name: 'AF (Air Force)' },
-  { id: 'ocu',      name: 'OCU (Organized Crime Unit)' },
-  { id: 'dea',      name: 'DEA (Drug Enforcement Administration)' },
-  { id: 'fna',      name: 'FNA (Federal National Academy)' },
-  { id: 'nsb',      name: 'NSB (National Security Branch)' },
-  { id: 'trainee',  name: 'TR (Trainee)' },
-  { id: 'director', name: 'Director' },
-  { id: 'cod',      name: 'Chief Of Discipline' },
-  { id: 'assh',     name: 'Assistance of Sheriff' }
-];
+import { DEPARTMENTS } from '../lib/departments';
 
 const PRESETS = [
   { id: 'default', label: 'Стандарт',  color: '#161616' },
