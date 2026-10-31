@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import MultiImageUploader from '../../components/MultiImageUploader';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 
 const RANK_OPTIONS = [
@@ -20,10 +21,10 @@ export default function HighRankReportForm() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
   const [formData, setFormData] = useState({ fullName: '', rankRange: '', workLink: '', workImages: [] });
   const [conditions, setConditions] = useState('');
@@ -41,23 +42,13 @@ export default function HighRankReportForm() {
         const meData = await meRes.json().catch(() => ({}));
         const profileData = await profileRes.json().catch(() => ({}));
         const conditionsData = await conditionsRes.json().catch(() => ({}));
-
         if (cancelled) return;
         if (!meData?.user) { router.push('/'); return; }
-        setUser(meData.user);
-        setIsAdmin(!!meData.isAdmin);
-
+        setUser(meData.user); setIsAdmin(!!meData.isAdmin);
         if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
-        if (profileData.banned) {
-          setBanned(true);
-          setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(profileData.banUntil || null);
-        }
-        if (conditionsData.content) {
-          setConditions(conditionsData.content);
-          setTempConditions(conditionsData.content);
-        }
-      } catch (e) { console.error('[high-rank] load error:', e); } finally { if (!cancelled) setLoading(false); }
+        if (profileData.banned) { setBanned(true); setBanReason(profileData.banReason || 'Бан'); setBanUntil(profileData.banUntil || null); }
+        if (conditionsData.content) { setConditions(conditionsData.content); setTempConditions(conditionsData.content); }
+      } catch (e) { console.error(e); } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -66,7 +57,7 @@ export default function HighRankReportForm() {
     e.preventDefault();
     const hasLinks = formData.workLink && formData.workLink.trim().length > 0;
     const hasImages = Array.isArray(formData.workImages) && formData.workImages.length > 0;
-    if (!hasLinks && !hasImages) { alert('⚠️ Приложите хотя бы одну ссылку или скриншот проделанной работы.'); return; }
+    if (!hasLinks && !hasImages) { alert('⚠️ Приложите хотя бы одну ссылку или скриншот.'); return; }
 
     setSubmitting(true);
     try {
@@ -74,27 +65,19 @@ export default function HighRankReportForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'highrank', fullName: formData.fullName, rankRange: formData.rankRange, workLink: formData.workLink, workImages: formData.workImages })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20);
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
   const saveConditions = async () => {
-    const res = await fetch('/api/promotion-conditions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: tempConditions })
-    });
+    const res = await fetch('/api/promotion-conditions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: tempConditions }) });
     const data = await res.json();
     if (data.message) {
       setConditions(tempConditions); setEditConditions(false); setConditionStatus('✅ СОХРАНЕНО');
@@ -147,9 +130,7 @@ export default function HighRankReportForm() {
             <div className="cond-head">
               <span className="cond-num">ANNEX</span>
               <h2 className="cond-title">УСЛОВИЯ ДЛЯ ПОВЫШЕНИЯ</h2>
-              {isAdmin && !editConditions && (
-                <button className="cond-edit" onClick={() => { setEditConditions(true); setTempConditions(conditions); }}>✎ РЕД.</button>
-              )}
+              {isAdmin && !editConditions && <button className="cond-edit" onClick={() => { setEditConditions(true); setTempConditions(conditions); }}>✎ РЕД.</button>}
             </div>
             {editConditions ? (
               <>
@@ -161,7 +142,7 @@ export default function HighRankReportForm() {
               </>
             ) : (
               <div className="cond-body">
-                {conditions ? <div className="cond-text">{conditions}</div> : <p className="cond-empty">УСЛОВИЯ НЕ ЗАПОЛНЕНЫ{isAdmin && <span className="cond-hint"> · Нажмите «РЕД.»</span>}</p>}
+                {conditions ? <div className="cond-text">{conditions}</div> : <p className="cond-empty">УСЛОВИЯ НЕ ЗАПОЛНЕНЫ</p>}
               </div>
             )}
             {conditionStatus && <p className="cond-status">{conditionStatus}</p>}
@@ -170,6 +151,7 @@ export default function HighRankReportForm() {
       </div>
       <SubmitOverlay show={success} text="Отчёт отправлен!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
       <style jsx>{`
         .form-page-wide { max-width: 1200px; margin: 0 auto; padding-bottom: 30px; }
         .split { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
@@ -183,7 +165,6 @@ export default function HighRankReportForm() {
         .cond-body { padding: 18px; max-height: 520px; overflow-y: auto; }
         .cond-text { white-space: pre-line; color: #d0d0d0; font-size: 13.5px; line-height: 1.75; }
         .cond-empty { color: #555; font-family: ui-monospace, monospace; font-size: 10.5px; text-align: center; padding: 30px 0; }
-        .cond-hint { color: #888; }
         .cond-ta { margin: 14px; min-height: 320px; width: calc(100% - 28px); }
         .cond-actions { display: flex; gap: 8px; padding: 0 14px 14px; }
         .btn-mini { flex: 1; padding: 9px 12px; background: transparent; border: 1px solid #333; color: #ccc; cursor: pointer; font-family: ui-monospace, monospace; font-size: 10px; }
