@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import MultiImageUploader from '../../components/MultiImageUploader';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 
 const DEPARTMENTS = [
@@ -18,7 +19,7 @@ const RANKS = ['1','2','3','4','5','6','7','8','9','10'];
 
 export default function ReportForm() {
   const router = useRouter();
-  const { cooldown, trigger } = useCooldown('report'); // ХУК
+  const { cooldown, trigger } = useCooldown('report');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -26,11 +27,9 @@ export default function ReportForm() {
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
-  const [formData, setFormData] = useState({
-    fullName: '', department: '', currentRank: '', targetRank: '',
-    isInstructor: '', workLinks: '', workImages: []
-  });
+  const [formData, setFormData] = useState({ fullName: '', department: '', currentRank: '', targetRank: '', isInstructor: '', workLinks: '', workImages: [] });
 
   const targetRankNum = parseInt(formData.targetRank);
   const showInstructorField = (targetRankNum === 9 || targetRankNum === 10) && formData.department !== 'fa';
@@ -47,12 +46,8 @@ export default function ReportForm() {
         setUser(meData.user);
         if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
         if (profileData.department) setFormData(prev => ({ ...prev, department: profileData.department }));
-        if (profileData.banned) {
-          setBanned(true);
-          setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(profileData.banUntil || null);
-        }
-      } catch (e) { console.error('[report] load error:', e); } finally { if (!cancelled) setLoading(false); }
+        if (profileData.banned) { setBanned(true); setBanReason(profileData.banReason || 'Бан'); setBanUntil(profileData.banUntil || null); }
+      } catch (e) { console.error(e); } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -62,7 +57,7 @@ export default function ReportForm() {
     if (showInstructorField && formData.isInstructor !== 'yes') { alert('⚠️ Для повышения на 9 или 10 ранг необходимо подтвердить назначение на инструктора!'); return; }
     const hasLinks = formData.workLinks && formData.workLinks.trim().length > 0;
     const hasImages = Array.isArray(formData.workImages) && formData.workImages.length > 0;
-    if (!hasLinks && !hasImages) { alert('⚠️ Приложите хотя бы одну ссылку или скриншот проделанной работы.'); return; }
+    if (!hasLinks && !hasImages) { alert('⚠️ Приложите хотя бы одну ссылку или скриншот.'); return; }
 
     setSubmitting(true);
     try {
@@ -70,20 +65,14 @@ export default function ReportForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'report', department: formData.department, fullName: formData.fullName, currentRank: formData.currentRank, targetRank: formData.targetRank, isInstructor: formData.isInstructor || 'no', workLinks: formData.workLinks, workImages: formData.workImages })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20); // Запуск кулдауна
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); } // Если спам
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -152,6 +141,7 @@ export default function ReportForm() {
       </div>
       <SubmitOverlay show={success} text="Отчёт успешно отправлен!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
     </Layout>
   );
 }
