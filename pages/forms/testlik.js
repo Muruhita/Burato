@@ -4,6 +4,7 @@ import Head from 'next/head';
 import ImageUploader from '../../components/ImageUploader';
 import MultiImageUploader from '../../components/MultiImageUploader';
 import BanOverlay from '../../components/BanOverlay';
+import SubmitOverlay from '../../components/SubmitOverlay';
 
 export default function TestLikPage() {
   const router = useRouter();
@@ -271,7 +272,7 @@ export default function TestLikPage() {
               <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
             </svg>
             <p className="success-text">ТЕСТ ОТПРАВЛЕН</p>
-            <p className="success-subtext">Проверьте Discord-канал</p>
+      <SubmitOverlay show={success} text="ТЕСТ ОТПРАВЛЕН" subtext="Проверьте Discord-канал" />
           </div>
         </div>
       )}
@@ -646,82 +647,6 @@ export default function TestLikPage() {
           letter-spacing: 2.4px;
           margin-top: 26px;
           text-transform: uppercase;
-        }
-
-        /* ── УСПЕХ ── */
-        .success-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(5, 5, 5, 0.85);
-          backdrop-filter: blur(10px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-          animation: overlayIn 0.3s ease;
-        }
-        @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
-        .success-box {
-          background: #0c0c0c;
-          border: 1px solid #2a2a2a;
-          padding: 46px 60px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          animation: boxIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-          box-shadow: 0 30px 80px rgba(0,0,0,0.7);
-        }
-        @keyframes boxIn {
-          0%   { transform: scale(0.7) translateY(20px); opacity: 0; }
-          100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        .checkmark-svg {
-          width: 88px;
-          height: 88px;
-          margin-bottom: 22px;
-        }
-        .checkmark-svg circle {
-          stroke: #fff;
-          stroke-width: 2;
-          stroke-dasharray: 166;
-          stroke-dashoffset: 166;
-          animation: strokeCircle 0.7s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-        }
-        .checkmark-svg path {
-          stroke: #fff;
-          stroke-width: 3.5;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          fill: none;
-          stroke-dasharray: 48;
-          stroke-dashoffset: 48;
-          animation: strokeCheck 0.45s cubic-bezier(0.65, 0, 0.45, 1) 0.55s forwards;
-        }
-        @keyframes strokeCircle { to { stroke-dashoffset: 0; } }
-        @keyframes strokeCheck { to { stroke-dashoffset: 0; } }
-        .success-text {
-          color: #fff;
-          font-family: ui-monospace, monospace;
-          font-size: 18px;
-          font-weight: 800;
-          letter-spacing: 2.4px;
-          margin: 0 0 6px;
-          text-transform: uppercase;
-          opacity: 0;
-          animation: textIn 0.4s ease 0.85s forwards;
-        }
-        .success-subtext {
-          color: #777;
-          font-size: 12px;
-          margin: 0;
-          letter-spacing: 0.4px;
-          opacity: 0;
-          animation: textIn 0.4s ease 1s forwards;
-        }
-        @keyframes textIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
         }
 
         /* ── МОБИЛЬНАЯ ── */
