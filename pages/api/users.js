@@ -1,5 +1,6 @@
 import redis from '../../lib/redis';
 import { verifyToken } from '../../lib/discord';
+import redis, { scanKeys } from '../../lib/redis';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const keys = await redis.keys('nickname:*');
+        const keys = await scanKeys('nickname:*');
     if (!keys.length) return res.status(200).json({ users: [] });
 
     const userIds = keys.map(k => k.replace('nickname:', ''));
