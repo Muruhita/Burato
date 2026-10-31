@@ -1,3 +1,4 @@
+import redis from '../../lib/redis';
 import { verifyToken } from '../../lib/discord';
 
 export const config = {
@@ -17,6 +18,27 @@ export default async function handler(req, res) {
   const token = req.cookies.token;
   const user = verifyToken(token);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    // 🔒 Rate-limit: не больше 10 загрузок в минуту на пользователя.
+  // Защищает ImgBB-ключ от спама / случайного бана аккаунта.
+  const RATE_LIMIT = 15;
+  const RATE_WINDOW = 60; // сек
+  try {
+    const rlKey = `upload:rate:${user.id}`;
+    const count = await redis.incr(rlKey);
+    if (count === 1) {
+      await redis.expire(rlKey, RATE_WINDOW);
+    }
+    if (count > RATE_LIMIT) {
+      const ttl = await redis.ttl(rlKey);
+      return res.status(429).json({
+        error: `Слишком много загрузок. Подождите ${Math.max(1, ttl)} сек.`,
+      });
+    }
+  } catch (e) {
+    // Если Redis недоступен — не блокируем пользователя (fail-open).
+    console.error('[upload] rate-limit error:', e.message);
+  }
 
   const apiKey = process.env.IMGBB_API_KEY;
   if (!apiKey) {
