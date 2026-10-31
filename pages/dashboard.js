@@ -59,9 +59,14 @@ export default function Dashboard() {
       .catch(() => {});
   }, []);
 
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const [dateStr, setDateStr] = useState('');
+  const [timeStr, setTimeStr] = useState('');
+
+  useEffect(() => {
+    const now = new Date();
+    setDateStr(now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+    setTimeStr(now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }));
+  }, []);
 
   const activeCategory = CATEGORIES.find(c => c.id === activeCat) || CATEGORIES[0];
   const visibleForms = activeCategory.formIds
