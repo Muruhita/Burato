@@ -19,6 +19,13 @@ const SORT_OPTIONS = [
   { id: 'status',    label: 'СТАТУС' },
 ];
 
+// Хелпер для правильного формирования ссылки на аватарку
+const getAvatarUrl = (userId, avatar) => {
+  if (!avatar) return null;
+  const format = avatar.startsWith('a_') ? 'gif' : 'png';
+  return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.${format}?size=128`;
+};
+
 export default function Members() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -180,8 +187,8 @@ export default function Members() {
               const dept = DEPT_SHORT[user.department] || user.department || '—';
               const rankLabel = getRankLabel(user.rank);
               const rankShort = getRankShort(user.rank);
+              const avatarUrl = getAvatarUrl(user.userId, user.avatar);
 
-              // Логика классов: если забанен -> красный, иначе пресеты
               let cardClass = 'member';
               if (user.banned) {
                 cardClass += ' member-banned';
@@ -195,7 +202,6 @@ export default function Members() {
                   className={cardClass}
                   style={{ animationDelay: `${i * 0.02}s` }}
                 >
-                  {/* Огромный замок на фоне для забаненных */}
                   {user.banned && <div className="member-lock">🔒</div>}
 
                   {hasCustomImage && !user.banned && (
@@ -213,13 +219,18 @@ export default function Members() {
 
                   <div className="member-inner">
                     <div className="member-avatar">
-                      {user.avatar ? (
+                      {/* ВСЕГДА рендерим заглушку. Картинка ляжет поверх неё */}
+                      <div className="member-avatar-empty">?</div>
+                      
+                      {avatarUrl && (
                         <img
-                          src={`https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.png`}
+                          src={avatarUrl}
                           alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          // Если картинка не загрузится (404, 403), скрываем тег img, и остаётся заглушка "?"
+                          onError={(e) => { e.target.style.display = 'none'; }}
                         />
-                      ) : (
-                        <div className="member-avatar-empty">?</div>
                       )}
                     </div>
 
@@ -250,24 +261,16 @@ export default function Members() {
       </div>
 
       <style jsx>{`
+        /* ... ВСЕ СТИЛИ ОСТАЮТСЯ ТАКИМИ ЖЕ, КАК В ПРЕДЫДУЩЕМ ФАЙЛЕ ... */
         .info { max-width: 1200px; margin: 0 auto; }
-
         .page-head { margin-bottom: 26px; animation: fadeIn 0.45s ease; }
-        .ph-stamp {
-          display: inline-block; padding: 3px 10px; border: 1px solid #333; color: #888;
-          font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 3px;
-          text-transform: uppercase; margin-bottom: 14px;
-        }
-        .ph-title {
-          font-size: 42px; font-weight: 900; letter-spacing: 3px; margin: 0;
-          color: #fff; line-height: 1; text-transform: uppercase;
-        }
+        .ph-stamp { display: inline-block; padding: 3px 10px; border: 1px solid #333; color: #888; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+        .ph-title { font-size: 42px; font-weight: 900; letter-spacing: 3px; margin: 0; color: #fff; line-height: 1; text-transform: uppercase; }
         .ph-dot { color: #fff; animation: blink 1.2s steps(2, start) infinite; }
         @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0.15; } }
         .ph-sub { color: #888; font-size: 13px; margin: 12px 0 0; }
         .ph-rule { height: 1px; background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%); margin: 18px 0 0; }
 
-        /* ═══ ФИЛЬТРЫ ═══ */
         .filters { background: #0c0c0c; border: 1px solid #1f1f1f; padding: 16px 18px; margin-bottom: 18px; animation: cardIn 0.4s ease; }
         .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .search-wrap { position: relative; flex: 1 1 260px; min-width: 200px; }
@@ -290,63 +293,22 @@ export default function Members() {
         .fm-found strong { color: #fff; font-size: 12px; }
         .fm-chip { padding: 3px 9px; background: rgba(255,255,255,0.06); border: 1px solid #2a2a2a; color: #ccc; text-transform: uppercase; font-size: 10px; }
 
-        /* ═══ РЕЕСТР ═══ */
         .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 
-        .member {
-          position: relative; background: #0c0c0c; border: 1px solid #1f1f1f; padding: 0;
-          overflow: hidden; transition: all 0.22s ease; opacity: 0; animation: cardIn 0.4s ease forwards;
-        }
-        .member:hover {
-          background: #131313; border-color: #fff; transform: translateY(-3px);
-          box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
-        }
+        .member { position: relative; background: #0c0c0c; border: 1px solid #1f1f1f; padding: 0; overflow: hidden; transition: all 0.22s ease; opacity: 0; animation: cardIn 0.4s ease forwards; }
+        .member:hover { background: #131313; border-color: #fff; transform: translateY(-3px); box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff; }
 
-        /* ── БАН: КРАСНАЯ КАРТОЧКА С ЗАМКОМ ── */
-        .member-banned {
-          background: #140505;
-          border-color: #ff3333;
-          box-shadow: inset 0 0 20px rgba(255, 50, 50, 0.1);
-        }
-        .member-banned:hover {
-          border-color: #ff4444;
-          box-shadow: 0 0 20px rgba(255, 50, 50, 0.3), inset 0 0 30px rgba(255, 50, 50, 0.2);
-          transform: translateY(-3px);
-        }
-        .member-banned .member-avatar {
-          border-color: #ff3333;
-        }
-        .member-banned .member-avatar img {
-          filter: grayscale(1) sepia(1) hue-rotate(-50deg) saturate(3) opacity(0.7);
-        }
-        .member-banned .member-nick {
-          color: #ff8080;
-        }
-        .member-banned .member-user {
-          color: #a04040;
-        }
-        .member-banned .member-rank-line {
-          color: #a04040;
-        }
-        .member-banned .member-foot {
-          border-top-color: #3a1a1a;
-        }
-        .member-banned .m-dept {
-          color: #ff8080;
-        }
-        .member-lock {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%) rotate(-15deg);
-          font-size: 90px;
-          opacity: 0.08;
-          pointer-events: none;
-          z-index: 1;
-          filter: drop-shadow(0 0 10px #ff0000);
-        }
+        .member-banned { background: #140505; border-color: #ff3333; box-shadow: inset 0 0 20px rgba(255, 50, 50, 0.1); }
+        .member-banned:hover { border-color: #ff4444; box-shadow: 0 0 20px rgba(255, 50, 50, 0.3), inset 0 0 30px rgba(255, 50, 50, 0.2); transform: translateY(-3px); }
+        .member-banned .member-avatar { border-color: #ff3333; }
+        .member-banned .member-avatar img { filter: grayscale(1) sepia(1) hue-rotate(-50deg) saturate(3) opacity(0.7); }
+        .member-banned .member-nick { color: #ff8080; }
+        .member-banned .member-user { color: #a04040; }
+        .member-banned .member-rank-line { color: #a04040; }
+        .member-banned .member-foot { border-top-color: #3a1a1a; }
+        .member-banned .m-dept { color: #ff8080; }
+        .member-lock { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 90px; opacity: 0.08; pointer-events: none; z-index: 1; filter: drop-shadow(0 0 10px #ff0000); }
 
-        /* ── ПРЕСЕТЫ ── */
         .member-preset-blue { background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-color: #3b82f6; }
         .member-preset-purple { background: linear-gradient(135deg, #4c1d95, #a855f7); border-color: #a855f7; }
         .member-preset-green { background: linear-gradient(135deg, #065f46, #10b981); border-color: #10b981; }
@@ -359,10 +321,29 @@ export default function Members() {
 
         .member-inner { position: relative; display: flex; align-items: center; gap: 14px; padding: 16px 16px 12px; z-index: 2; }
 
-        .member-avatar { flex: 0 0 48px; width: 48px; height: 48px; border: 1px solid #2a2a2a; overflow: hidden; background: #060606; transition: border-color 0.22s; }
-        .member-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(0.4); transition: filter 0.22s; }
+        /* ИСПРАВЛЕННЫЙ БЛОК АВАТАРКИ */
+        .member-avatar { 
+          position: relative; /* Чтобы заглушка была под картинкой */
+          flex: 0 0 48px; 
+          width: 48px; height: 48px; 
+          border: 1px solid #2a2a2a; 
+          overflow: hidden; 
+          background: #060606; 
+          transition: border-color 0.22s; 
+        }
+        .member-avatar-empty { 
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center; 
+          color: #333; font-family: ui-monospace, monospace; font-size: 20px; 
+          z-index: 0;
+        }
+        .member-avatar img { 
+          position: relative;
+          z-index: 1; /* Картинка поверх заглушки */
+          width: 100%; height: 100%; object-fit: cover; display: block; 
+          filter: grayscale(0.4); transition: filter 0.22s; 
+        }
         .member:hover .member-avatar img { filter: grayscale(0); }
-        .member-avatar-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #333; font-family: ui-monospace, monospace; font-size: 20px; }
 
         .member-info { flex: 1; min-width: 0; }
         .member-nick { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; transition: color 0.22s; }
@@ -374,7 +355,6 @@ export default function Members() {
         .m-status.is-active { color: #8ee08e; }
         .m-status.is-banned { color: #ff4444; font-weight: 800; text-shadow: 0 0 8px rgba(255, 50, 50, 0.4); }
 
-        /* ── ПУСТЫЕ СОСТОЯНИЯ ── */
         .panel { background: #0c0c0c; border: 1px solid #1f1f1f; }
         .panel-body.center { padding: 60px 20px; text-align: center; }
         .empty-icon { font-family: ui-monospace, monospace; font-size: 32px; color: #2a2a2a; letter-spacing: 6px; margin-bottom: 12px; }
