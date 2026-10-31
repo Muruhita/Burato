@@ -3,9 +3,11 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import { useCooldown } from '../../hooks/useCooldown';
 
 export default function ExamForm() {
   const router = useRouter();
+  const { cooldown, trigger } = useCooldown('exam');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -18,32 +20,21 @@ export default function ExamForm() {
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
-        const [meRes, profileRes] = await Promise.all([
-          fetch('/api/me'),
-          fetch('/api/profile')
-        ]);
+        const [meRes, profileRes] = await Promise.all([fetch('/api/me'), fetch('/api/profile')]);
         const meData = await meRes.json().catch(() => ({}));
         const profileData = await profileRes.json().catch(() => ({}));
-
         if (cancelled) return;
         if (!meData?.user) { router.push('/'); return; }
-
         setUser(meData.user);
         if (profileData.banned) {
           setBanned(true);
           setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
           setBanUntil(profileData.banUntil || null);
         }
-      } catch (e) {
-        console.error('[exam] load error:', e);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      } catch (e) { console.error('[exam] load error:', e); } finally { if (!cancelled) setLoading(false); }
     })();
-
     return () => { cancelled = true; };
   }, []);
 
@@ -52,107 +43,63 @@ export default function ExamForm() {
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'exam',
-          examType: formData.examType,
-          whenAvailable: formData.whenAvailable
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'exam', examType: formData.examType, whenAvailable: formData.whenAvailable })
       });
       if (res.ok) {
         setSuccess(true);
+        trigger(20);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
       if (res.status === 403) {
         const err = await res.json();
-        if (err.banned) {
-          setBanned(true);
-          setBanReason(err.reason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(err.until || null);
-          setSubmitting(false);
-          return;
-        }
+        if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
         throw new Error(err.error || 'Доступ запрещён');
       }
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
-    } catch (error) {
-      alert('❌ ' + error.message);
-      setSubmitting(false);
-    }
+    } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
-  if (loading) {
-    return <Layout><div className="loading-line">ЗАГРУЗКА ДАННЫХ...</div></Layout>;
-  }
+  if (loading) return <Layout><div className="loading-line">ЗАГРУЗКА ДАННЫХ...</div></Layout>;
 
   return (
     <Layout>
       <div className="form-page">
         <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
-
         <div className="form-shell">
           <header className="form-head">
             <div className="fh-stamp">FORM-014 · TRAINING</div>
             <h1 className="fh-title">Запрос на экзамен</h1>
-            <p className="fh-sub">
-              Запрос на сдачу экзамена (устный, практический или оба). Укажите удобное время.
-            </p>
+            <p className="fh-sub">Запрос на сдачу экзамена (устный, практический или оба). Укажите удобное время.</p>
             <div className="fh-rule" />
           </header>
-
           <form onSubmit={handleSubmit} className="form-body">
             <div className="field-block">
               <label className="lbl">Отправитель (автоматически)</label>
-              <input
-                className="field"
-                type="text"
-                value={user ? `${user.username} (${user.id})` : ''}
-                disabled
-                style={{ opacity: 0.45, cursor: 'not-allowed' }}
-              />
+              <input className="field" type="text" value={user ? `${user.username} (${user.id})` : ''} disabled style={{ opacity: 0.45 }} />
             </div>
-
             <div className="field-block">
               <label className="lbl">Тип экзамена</label>
-              <select
-                className="field"
-                required
-                value={formData.examType}
-                onChange={(e) => setFormData({ ...formData, examType: e.target.value })}
-              >
+              <select className="field" required value={formData.examType} onChange={(e) => setFormData({ ...formData, examType: e.target.value })}>
                 <option value="">-- ВЫБЕРИТЕ ТИП --</option>
                 <option value="oral">🗣 Устный</option>
                 <option value="practical">⚔️ Практический</option>
                 <option value="both">🗣⚔️ Устный + Практический</option>
               </select>
             </div>
-
             <div className="field-block">
               <label className="lbl">Когда удобно пройти?</label>
-              <textarea
-                className="field"
-                required
-                rows="4"
-                value={formData.whenAvailable}
-                onChange={(e) => setFormData({ ...formData, whenAvailable: e.target.value })}
-                placeholder="Например: Сб/Вс с 14:00 до 20:00 МСК"
-              />
+              <textarea className="field" required rows="4" value={formData.whenAvailable} onChange={(e) => setFormData({ ...formData, whenAvailable: e.target.value })} placeholder="Например: Сб/Вс с 14:00 до 20:00 МСК" />
             </div>
-
-            <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting
-                ? <><span className="btn-spinner" /> ОТПРАВКА...</>
-                : banned
-                  ? '🚫 ДОСТУП ЗАБЛОКИРОВАН'
-                  : '→ ОТПРАВИТЬ'}
+            <button type="submit" className="submit-btn" disabled={submitting || success || banned || cooldown > 0}>
+              {cooldown > 0 ? `⏳ ПОДОЖДИТЕ ${cooldown} СЕК...` : submitting ? 'ОТПРАВКА...' : banned ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' : '→ ОТПРАВИТЬ'}
             </button>
           </form>
         </div>
       </div>
-
       <SubmitOverlay show={success} text="Запрос на экзамен отправлен!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
     </Layout>
