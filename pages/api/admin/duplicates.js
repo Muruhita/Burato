@@ -1,7 +1,6 @@
-import redis from '../../../lib/redis';
+import redis, { scanKeys } from '../../../lib/redis';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
-import redis, { scanKeys } from '../../../lib/redis';
 
 // Извлекаем статик из ника: последнее число из 4–8 цифр
 function extractStatic(nickname) {
