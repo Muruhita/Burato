@@ -13,7 +13,7 @@ import {
   TRUSTED_LINK_HOSTS
 } from '../../lib/urlValidator';
 import { checkUrlsSafeBrowsing, threatName } from '../../lib/safeBrowsing';
-import { logSubmission, logBanword, logError } from '../../lib/logger';
+import { logSubmission, logBanword, logError, getFormTitle } from '../../lib/logger';
 
 const DEPARTMENTS = {
   'ib': { name: 'IB (Intelligence Branch)', webhook: process.env.WEBHOOK_REPORT_IB, emoji: '🕵️', roleId: '1398200840900055071', roleId2: '1520504887497064639' },
@@ -568,24 +568,7 @@ function getWeekKey(date) {
   return `${date.getFullYear()}-W${week}`;
 }
 
-function getFormTitle(type, department, targetDepartment) {
-  if (type === 'testlik') return 'Test';
-  if (type === 'claim') return '⁉️ Жалоба';
-  if (type === 'hiring') return '💼 Трудоустройство в FIB';
-  if (type === 'withdrawal') return '🔑 Запрос на снятие ЧС';
-  if (type === 'reinstatement') return '🔄 Восстановление';
-  if (type === 'transferToFib') return '🏛️ Перевод в FIB';
-  if (type === 'weaponRequest') return '🔫 Спец Вооружение';
-  if (type === 'leave') return '🌴 Отпуск';
-  if (type === 'db') return '📅 Запрос на ДБ';
-  if (type === 'exam') return '📝 Запрос на экзамен';
-  if (type === 'ukmb') return '🎓 Запрос на УКМБ';
-  if (type === 'report') return `📋 Отчёт на повышение • ${DEPARTMENTS[department]?.name || ''}`;
-  if (type === 'transfer') return `🔀 Перевод в ${DEPARTMENTS[targetDepartment]?.name || targetDepartment || ''}`;
-  if (type === 'highrank') return '⚜️ Хай ранг отчет на повышении';
-  if (type === 'resignation') return '📛 Заявление на увольнение';
-  return '⬆️ Запрос на повышение';
-}
+
 
 function getFormColor(type) {
   const colors = {
