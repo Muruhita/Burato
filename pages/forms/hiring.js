@@ -2,34 +2,27 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
+import SystemAlert from '../../components/SystemAlert';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useCooldown } from '../../hooks/useCooldown';
 
 export default function HiringForm() {
   const router = useRouter();
-  const { cooldown, trigger } = useCooldown('hiring'); // ХУК
+  const { cooldown, trigger } = useCooldown('hiring');
   const [nickname, setNickname] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
-
-  const [formData, setFormData] = useState({
-    age: '', experience: '', lawKnowledge: '',
-    passportScreenshot: '', militaryId: '', medicalCertificates: ''
-  });
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
+  const [formData, setFormData] = useState({ age: '', experience: '', lawKnowledge: '', passportScreenshot: '', militaryId: '', medicalCertificates: '' });
 
   useEffect(() => {
     fetch('/api/profile').then(res => res.json()).then(data => {
       if (data.nickname) setNickname(data.nickname);
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
+      if (data.banned) { setBanned(true); setBanReason(data.banReason || 'Бан'); setBanUntil(data.banUntil || null); }
     }).catch(() => {});
   }, []);
 
@@ -45,20 +38,14 @@ export default function HiringForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'hiring', fullName: nickname, ...formData })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20); // Запуск кулдауна
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -104,6 +91,7 @@ export default function HiringForm() {
       </div>
       <SubmitOverlay show={success} text="Заявка на трудоустройство отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
     </Layout>
   );
 }
