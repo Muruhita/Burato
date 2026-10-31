@@ -4,6 +4,7 @@ import { containsBadWords } from '../../lib/badwords';
 import { getBanInfo } from '../../lib/ban-utils';
 import { isValidRank } from '../../lib/ranks';
 import { isSafeUrl, TRUSTED_IMAGE_HOSTS } from '../../lib/urlValidator';
+import { isValidDepartment } from '../../lib/departments';
 
 const ALLOWED_PRESETS = ['default', 'blue', 'purple', 'green'];
 const MAX_URL_LENGTH = 500;
@@ -79,7 +80,13 @@ export default async function handler(req, res) {
     }
 
     if (department !== undefined) {
-      await redis.set(`department:${user.id}`, department);
+      if (department === '' || department === null) {
+        await redis.del(`department:${user.id}`);
+      } else if (!isValidDepartment(department)) {
+        return res.status(400).json({ error: 'Некорректный отдел' });
+      } else {
+        await redis.set(`department:${user.id}`, String(department));
+      }
     }
 
     if (rank !== undefined) {
