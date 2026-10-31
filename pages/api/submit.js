@@ -507,26 +507,38 @@ export default async function handler(req, res) {
   // ─────────────────────────────────────────────────
   // 📤 12. Отправка в Discord
   // ─────────────────────────────────────────────────
-  const result = await sendToDiscord(
-    webhookUrl,
-    {
-      content: roleMentions.trim() || undefined,
-      embeds: [embed],
-      username: 'FIB Forms',
-      avatar_url: 'https://i.ytimg.com/vi/m5yUwUSBxsg/maxresdefault.jpg'
-    },
-    leaveThreadId
-  );
+  // 🚦 Логируем попытку отправки ПАРАЛЛЕЛЬНО с основным вебхуком.
+  // Если Discord отклонит заявку (5xx / 429) — лог всё равно уйдёт в WEBHOOK_LOGS,
+  // и админ увидит «пользователь пытался отправить, но Discord упал».
+  const [sendResult, logResult] = await Promise.allSettled([
+    sendToDiscord(
+      webhookUrl,
+      {
+        content: roleMentions.trim() || undefined,
+        embeds: [embed],
+        username: 'FIB Forms',
+        avatar_url: 'https://i.ytimg.com/vi/m5yUwUSBxsg/maxresdefault.jpg'
+      },
+      leaveThreadId
+    ),
+    logSubmission({
+      type,
+      username,
+      userId,
+      avatar: user.avatar,
+      formData,
+      department,
+      targetDepartment
+    }),
+  ]);
 
-  logSubmission({
-    type,
-    username,
-    userId,
-    avatar: user.avatar,
-    formData,
-    department,
-    targetDepartment
-  }).catch(e => console.error('[submit] submission log error:', e.message));
+  const result = sendResult.status === 'fulfilled'
+    ? sendResult.value
+    : { success: false, error: sendResult.reason?.message || 'send failed' };
+
+  if (logResult.status === 'rejected') {
+    console.error('[submit] submission log error:', logResult.reason?.message);
+  }
 
   // ─────────────────────────────────────────────────
   // 📊 13. Статистика (только при успешной отправке)
