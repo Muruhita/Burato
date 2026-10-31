@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 // import { ADMIN_IDS } from '../lib/admins';
 
-export default function Layout({ children }) {
+export default function Layout({ children, public: isPublic = false }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -12,11 +12,18 @@ export default function Layout({ children }) {
     fetch('/api/me')
       .then(res => res.json())
       .then(data => {
-        if (!data.user) { router.push('/'); return; }
+        if (!data.user) {
+          // Публичные страницы (например, /author) не редиректят гостей
+          if (!isPublic) router.push('/');
+          return;
+        }
         setUser(data.user);
         setIsAdmin(!!data.isAdmin);
+      })
+      .catch(() => {
+        if (!isPublic) router.push('/');
       });
-  }, []);
+  }, [isPublic]);
 
   useEffect(() => {
     fetch('/api/announcement')
