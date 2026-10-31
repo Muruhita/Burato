@@ -79,11 +79,12 @@ export default async function handler(req, res) {
       });
     }
 
+    // deleteUrl и id клиенту не нужны: удаление через фронт не поддерживается,
+    // внутренний ID imgbb тоже бесполезен для пользователя.
+    // Оставляем только публичные поля.
     return res.status(200).json({
-      url: data.data.url,           // https://i.ibb.co/xxxx/image.png
+      url: data.data.url,
       displayUrl: data.data.display_url,
-      deleteUrl: data.data.delete_url,
-      id: data.data.id
     });
   } catch (error) {
     console.error('[upload] ошибка:', error);
