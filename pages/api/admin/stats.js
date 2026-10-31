@@ -1,6 +1,7 @@
 import redis from '../../../lib/redis';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
+import redis, { scanKeys } from '../../../lib/redis';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -12,7 +13,7 @@ export default async function handler(req, res) {
   try {
     const total = await redis.get('stats:total') || 0;
 
-    const typesKeys = await redis.keys('stats:type:*');
+    const typesKeys = await scanKeys('stats:type:*');
     const types = {};
     for (const key of typesKeys) {
       const type = key.replace('stats:type:', '');
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
     const thisWeek = await redis.get(weekKey) || 0;
     const thisMonth = await redis.get(monthKey) || 0;
 
-    const userKeys = await redis.keys('stats:user:*');
+    const userKeys = await scanKeys('stats:user:*');
     const activeUsers = userKeys.length;
 
     res.status(200).json({ total, types, today, thisWeek, thisMonth, activeUsers });
