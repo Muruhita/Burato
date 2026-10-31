@@ -657,8 +657,6 @@ export default function TestLikPage() {
           .form-body { padding: 22px 18px; }
           .back-float { top: 42px; left: 12px; padding: 7px 11px; font-size: 10px; }
           .bf-text { display: none; }
-          .success-box { padding: 36px 34px; }
-          .checkmark-svg { width: 68px; height: 68px; margin-bottom: 18px; }
         }
 
         @keyframes cardIn {
