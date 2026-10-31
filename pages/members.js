@@ -64,23 +64,16 @@ export default function Members() {
 
     list = [...list].sort((a, b) => {
       switch (sortBy) {
-        case 'nick-asc':
-          return (a.nickname || '').localeCompare(b.nickname || '', 'ru');
-        case 'nick-desc':
-          return (b.nickname || '').localeCompare(a.nickname || '', 'ru');
-        case 'dept-asc':
-          return deptName(a.department).localeCompare(deptName(b.department));
-        case 'dept-desc':
-          return deptName(b.department).localeCompare(deptName(a.department));
-        case 'rank-desc':
-          return rankValue(b.rank) - rankValue(a.rank);
-        case 'rank-asc':
-          return rankValue(a.rank) - rankValue(b.rank);
+        case 'nick-asc': return (a.nickname || '').localeCompare(b.nickname || '', 'ru');
+        case 'nick-desc': return (b.nickname || '').localeCompare(a.nickname || '', 'ru');
+        case 'dept-asc': return deptName(a.department).localeCompare(deptName(b.department));
+        case 'dept-desc': return deptName(b.department).localeCompare(deptName(a.department));
+        case 'rank-desc': return rankValue(b.rank) - rankValue(a.rank);
+        case 'rank-asc': return rankValue(a.rank) - rankValue(b.rank);
         case 'status':
           if (a.banned === b.banned) return (a.nickname || '').localeCompare(b.nickname || '', 'ru');
           return a.banned ? 1 : -1;
-        default:
-          return 0;
+        default: return 0;
       }
     });
 
@@ -188,8 +181,13 @@ export default function Members() {
               const rankLabel = getRankLabel(user.rank);
               const rankShort = getRankShort(user.rank);
 
+              // Логика классов: если забанен -> красный, иначе пресеты
               let cardClass = 'member';
-              if (presetId && presetId !== 'default') cardClass += ` member-preset-${presetId}`;
+              if (user.banned) {
+                cardClass += ' member-banned';
+              } else if (presetId && presetId !== 'default') {
+                cardClass += ` member-preset-${presetId}`;
+              }
 
               return (
                 <article
@@ -197,14 +195,17 @@ export default function Members() {
                   className={cardClass}
                   style={{ animationDelay: `${i * 0.02}s` }}
                 >
-                  {hasCustomImage && (
+                  {/* Огромный замок на фоне для забаненных */}
+                  {user.banned && <div className="member-lock">🔒</div>}
+
+                  {hasCustomImage && !user.banned && (
                     <div
                       className="member-bg"
                       style={{ backgroundImage: `url(${user.profileCustom.url})` }}
                     />
                   )}
 
-                  {rankShort && (
+                  {rankShort && !user.banned && (
                     <span className="member-rank" title={rankLabel || ''}>
                       {rankShort}
                     </span>
@@ -238,7 +239,7 @@ export default function Members() {
                   <div className="member-foot">
                     <span className="m-dept">[{dept}]</span>
                     <span className={`m-status ${user.banned ? 'is-banned' : 'is-active'}`}>
-                      {user.banned ? '⛔ BAN' : '● ACTIVE'}
+                      {user.banned ? '🔒 ЗАБЛОКИРОВАН' : '● ACTIVE'}
                     </span>
                   </div>
                 </article>
@@ -253,373 +254,137 @@ export default function Members() {
 
         .page-head { margin-bottom: 26px; animation: fadeIn 0.45s ease; }
         .ph-stamp {
-          display: inline-block;
-          padding: 3px 10px;
-          border: 1px solid #333;
-          color: #888;
-          font-family: ui-monospace, monospace;
-          font-size: 10px;
-          letter-spacing: 3px;
-          text-transform: uppercase;
-          margin-bottom: 14px;
+          display: inline-block; padding: 3px 10px; border: 1px solid #333; color: #888;
+          font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 3px;
+          text-transform: uppercase; margin-bottom: 14px;
         }
         .ph-title {
-          font-size: 42px;
-          font-weight: 900;
-          letter-spacing: 3px;
-          margin: 0;
-          color: #fff;
-          line-height: 1;
-          text-transform: uppercase;
+          font-size: 42px; font-weight: 900; letter-spacing: 3px; margin: 0;
+          color: #fff; line-height: 1; text-transform: uppercase;
         }
         .ph-dot { color: #fff; animation: blink 1.2s steps(2, start) infinite; }
-        @keyframes blink {
-          0%, 50% { opacity: 1; }
-          50.01%, 100% { opacity: 0.15; }
-        }
+        @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0.15; } }
         .ph-sub { color: #888; font-size: 13px; margin: 12px 0 0; }
-        .ph-rule {
-          height: 1px;
-          background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%);
-          margin: 18px 0 0;
-        }
+        .ph-rule { height: 1px; background: linear-gradient(90deg, #fff 0%, #555 20%, #1a1a1a 100%); margin: 18px 0 0; }
 
         /* ═══ ФИЛЬТРЫ ═══ */
-        .filters {
-          background: #0c0c0c;
-          border: 1px solid #1f1f1f;
-          padding: 16px 18px;
-          margin-bottom: 18px;
-          animation: cardIn 0.4s ease;
-        }
-        .filter-row {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .search-wrap {
-          position: relative;
-          flex: 1 1 260px;
-          min-width: 200px;
-        }
-        .search-icon {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #555;
-          font-size: 15px;
-          pointer-events: none;
-        }
-        .search-input {
-          width: 100%;
-          padding: 11px 36px 11px 34px;
-          background: #060606;
-          border: 1px solid #262626;
-          color: #fff;
-          border-radius: 0;
-          font-size: 13.5px;
-          font-family: inherit;
-          outline: none;
-          box-sizing: border-box;
-          transition: border-color 0.2s;
-        }
+        .filters { background: #0c0c0c; border: 1px solid #1f1f1f; padding: 16px 18px; margin-bottom: 18px; animation: cardIn 0.4s ease; }
+        .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .search-wrap { position: relative; flex: 1 1 260px; min-width: 200px; }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #555; font-size: 15px; pointer-events: none; }
+        .search-input { width: 100%; padding: 11px 36px 11px 34px; background: #060606; border: 1px solid #262626; color: #fff; border-radius: 0; font-size: 13.5px; font-family: inherit; outline: none; box-sizing: border-box; transition: border-color 0.2s; }
         .search-input:focus { border-color: #fff; }
         .search-input::placeholder { color: #444; }
-        .search-clear {
-          position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 22px;
-          height: 22px;
-          background: transparent;
-          border: none;
-          color: #666;
-          cursor: pointer;
-          font-size: 13px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.18s;
-        }
+        .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; background: transparent; border: none; color: #666; cursor: pointer; font-size: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.18s; }
         .search-clear:hover { color: #fff; background: #222; }
 
-        .filter-select {
-          padding: 11px 34px 11px 14px;
-          background: #060606;
-          border: 1px solid #262626;
-          color: #fff;
-          border-radius: 0;
-          font-size: 12px;
-          font-family: ui-monospace, monospace;
-          letter-spacing: 1.4px;
-          text-transform: uppercase;
-          cursor: pointer;
-          appearance: none;
-          background-image: linear-gradient(45deg, transparent 50%, #666 50%),
-                            linear-gradient(135deg, #666 50%, transparent 50%);
-          background-position: calc(100% - 16px) center, calc(100% - 11px) center;
-          background-size: 5px 5px, 5px 5px;
-          background-repeat: no-repeat;
-          outline: none;
-          transition: border-color 0.2s;
-          flex-shrink: 0;
-        }
+        .filter-select { padding: 11px 34px 11px 14px; background: #060606; border: 1px solid #262626; color: #fff; border-radius: 0; font-size: 12px; font-family: ui-monospace, monospace; letter-spacing: 1.4px; text-transform: uppercase; cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, #666 50%), linear-gradient(135deg, #666 50%, transparent 50%); background-position: calc(100% - 16px) center, calc(100% - 11px) center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; outline: none; transition: border-color 0.2s; flex-shrink: 0; }
         .filter-select:focus { border-color: #fff; }
         .filter-select option { background: #0c0c0c; color: #fff; }
 
-        .filter-reset {
-          padding: 11px 14px;
-          background: transparent;
-          border: 1px solid #553030;
-          color: #ff8080;
-          cursor: pointer;
-          font-family: ui-monospace, monospace;
-          font-size: 11px;
-          letter-spacing: 1.8px;
-          text-transform: uppercase;
-          transition: all 0.18s;
-          flex-shrink: 0;
-        }
-        .filter-reset:hover {
-          background: #ff4444;
-          border-color: #ff4444;
-          color: #fff;
-        }
+        .filter-reset { padding: 11px 14px; background: transparent; border: 1px solid #553030; color: #ff8080; cursor: pointer; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; transition: all 0.18s; flex-shrink: 0; }
+        .filter-reset:hover { background: #ff4444; border-color: #ff4444; color: #fff; }
 
-        .filter-meta {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px dashed #1f1f1f;
-          font-family: ui-monospace, monospace;
-          font-size: 10.5px;
-          letter-spacing: 1.4px;
-        }
+        .filter-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #1f1f1f; font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: 1.4px; }
         .fm-found { color: #888; }
         .fm-found strong { color: #fff; font-size: 12px; }
-        .fm-chip {
-          padding: 3px 9px;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid #2a2a2a;
-          color: #ccc;
-          text-transform: uppercase;
-          font-size: 10px;
-        }
+        .fm-chip { padding: 3px 9px; background: rgba(255,255,255,0.06); border: 1px solid #2a2a2a; color: #ccc; text-transform: uppercase; font-size: 10px; }
 
         /* ═══ РЕЕСТР ═══ */
-        .roster {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 12px;
-        }
+        .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 
         .member {
-          position: relative;
-          background: #0c0c0c;
-          border: 1px solid #1f1f1f;
-          padding: 0;
-          overflow: hidden;
-          transition: all 0.22s ease;
-          opacity: 0;
-          animation: cardIn 0.4s ease forwards;
+          position: relative; background: #0c0c0c; border: 1px solid #1f1f1f; padding: 0;
+          overflow: hidden; transition: all 0.22s ease; opacity: 0; animation: cardIn 0.4s ease forwards;
         }
         .member:hover {
-          background: #131313;
-          border-color: #fff;
+          background: #131313; border-color: #fff; transform: translateY(-3px);
+          box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
+        }
+
+        /* ── БАН: КРАСНАЯ КАРТОЧКА С ЗАМКОМ ── */
+        .member-banned {
+          background: #140505;
+          border-color: #ff3333;
+          box-shadow: inset 0 0 20px rgba(255, 50, 50, 0.1);
+        }
+        .member-banned:hover {
+          border-color: #ff4444;
+          box-shadow: 0 0 20px rgba(255, 50, 50, 0.3), inset 0 0 30px rgba(255, 50, 50, 0.2);
           transform: translateY(-3px);
-          box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
         }
-
-        .member-preset-blue {
-          background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-          border-color: #3b82f6;
+        .member-banned .member-avatar {
+          border-color: #ff3333;
         }
-        .member-preset-purple {
-          background: linear-gradient(135deg, #4c1d95, #a855f7);
-          border-color: #a855f7;
+        .member-banned .member-avatar img {
+          filter: grayscale(1) sepia(1) hue-rotate(-50deg) saturate(3) opacity(0.7);
         }
-        .member-preset-green {
-          background: linear-gradient(135deg, #065f46, #10b981);
-          border-color: #10b981;
+        .member-banned .member-nick {
+          color: #ff8080;
         }
-        .member-preset-blue:hover,
-        .member-preset-purple:hover,
-        .member-preset-green:hover {
-          border-color: #fff;
-          box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff;
+        .member-banned .member-user {
+          color: #a04040;
         }
-
-        .member-bg {
+        .member-banned .member-rank-line {
+          color: #a04040;
+        }
+        .member-banned .member-foot {
+          border-top-color: #3a1a1a;
+        }
+        .member-banned .m-dept {
+          color: #ff8080;
+        }
+        .member-lock {
           position: absolute;
-          inset: 0;
-          background-size: cover;
-          background-position: center;
-          opacity: 0.22;
-          filter: grayscale(1);
-          transition: opacity 0.22s;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-15deg);
+          font-size: 90px;
+          opacity: 0.08;
           pointer-events: none;
+          z-index: 1;
+          filter: drop-shadow(0 0 10px #ff0000);
         }
+
+        /* ── ПРЕСЕТЫ ── */
+        .member-preset-blue { background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-color: #3b82f6; }
+        .member-preset-purple { background: linear-gradient(135deg, #4c1d95, #a855f7); border-color: #a855f7; }
+        .member-preset-green { background: linear-gradient(135deg, #065f46, #10b981); border-color: #10b981; }
+        .member-preset-blue:hover, .member-preset-purple:hover, .member-preset-green:hover { border-color: #fff; box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px #fff; }
+
+        .member-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.22; filter: grayscale(1); transition: opacity 0.22s; pointer-events: none; }
         .member:hover .member-bg { opacity: 0.35; }
 
-        /* Ранг бейдж в правом верхнем углу */
-        .member-rank {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          min-width: 28px;
-          height: 22px;
-          padding: 0 6px;
-          background: rgba(0, 0, 0, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          color: #fff;
-          font-family: ui-monospace, monospace;
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 0.5px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2;
-          border-radius: 2px;
-        }
+        .member-rank { position: absolute; top: 10px; right: 10px; min-width: 28px; height: 22px; padding: 0 6px; background: rgba(0, 0, 0, 0.65); border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; z-index: 2; border-radius: 2px; }
 
-        .member-inner {
-          position: relative;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 16px 16px 12px;
-        }
+        .member-inner { position: relative; display: flex; align-items: center; gap: 14px; padding: 16px 16px 12px; z-index: 2; }
 
-        .member-avatar {
-          flex: 0 0 48px;
-          width: 48px; height: 48px;
-          border: 1px solid #2a2a2a;
-          overflow: hidden;
-          background: #060606;
-        }
-        .member-avatar img {
-          width: 100%; height: 100%;
-          object-fit: cover;
-          display: block;
-          filter: grayscale(0.4);
-          transition: filter 0.22s;
-        }
+        .member-avatar { flex: 0 0 48px; width: 48px; height: 48px; border: 1px solid #2a2a2a; overflow: hidden; background: #060606; transition: border-color 0.22s; }
+        .member-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(0.4); transition: filter 0.22s; }
         .member:hover .member-avatar img { filter: grayscale(0); }
-        .member-avatar-empty {
-          width: 100%; height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #333;
-          font-family: ui-monospace, monospace;
-          font-size: 20px;
-        }
+        .member-avatar-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #333; font-family: ui-monospace, monospace; font-size: 20px; }
 
         .member-info { flex: 1; min-width: 0; }
-        .member-nick {
-          color: #fff;
-          font-size: 14px;
-          font-weight: 700;
-          letter-spacing: 0.2px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          margin-bottom: 3px;
-        }
-        .member-user {
-          color: #888;
-          font-family: ui-monospace, monospace;
-          font-size: 11px;
-          letter-spacing: 0.5px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .member-rank-line {
-          margin-top: 4px;
-          font-family: ui-monospace, monospace;
-          font-size: 10px;
-          letter-spacing: 1px;
-          color: #b0b0b0;
-          text-transform: uppercase;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
+        .member-nick { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: 0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; transition: color 0.22s; }
+        .member-user { color: #888; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.22s; }
+        .member-rank-line { margin-top: 4px; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 1px; color: #b0b0b0; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.22s; }
 
-        .member-foot {
-          position: relative;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 16px;
-          border-top: 1px solid #1a1a1a;
-          font-family: ui-monospace, monospace;
-          font-size: 10px;
-          letter-spacing: 1.6px;
-        }
-        .m-dept {
-          color: #fff;
-          font-weight: 700;
-        }
+        .member-foot { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-top: 1px solid #1a1a1a; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 1.6px; transition: border-color 0.22s; z-index: 2; }
+        .m-dept { color: #fff; font-weight: 700; transition: color 0.22s; }
         .m-status.is-active { color: #8ee08e; }
-        .m-status.is-banned { color: #ff8080; }
+        .m-status.is-banned { color: #ff4444; font-weight: 800; text-shadow: 0 0 8px rgba(255, 50, 50, 0.4); }
 
         /* ── ПУСТЫЕ СОСТОЯНИЯ ── */
         .panel { background: #0c0c0c; border: 1px solid #1f1f1f; }
         .panel-body.center { padding: 60px 20px; text-align: center; }
-        .empty-icon {
-          font-family: ui-monospace, monospace;
-          font-size: 32px;
-          color: #2a2a2a;
-          letter-spacing: 6px;
-          margin-bottom: 12px;
-        }
-        .muted {
-          color: #666;
-          font-family: ui-monospace, monospace;
-          font-size: 11px;
-          letter-spacing: 2.4px;
-          margin: 0;
-          text-transform: uppercase;
-        }
-        .empty-reset {
-          margin-top: 18px;
-          padding: 10px 18px;
-          background: transparent;
-          border: 1px solid #333;
-          color: #ccc;
-          cursor: pointer;
-          font-family: ui-monospace, monospace;
-          font-size: 11px;
-          letter-spacing: 1.8px;
-          text-transform: uppercase;
-          transition: all 0.18s;
-        }
+        .empty-icon { font-family: ui-monospace, monospace; font-size: 32px; color: #2a2a2a; letter-spacing: 6px; margin-bottom: 12px; }
+        .muted { color: #666; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 2.4px; margin: 0; text-transform: uppercase; }
+        .empty-reset { margin-top: 18px; padding: 10px 18px; background: transparent; border: 1px solid #333; color: #ccc; cursor: pointer; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; transition: all 0.18s; }
         .empty-reset:hover { background: #fff; border-color: #fff; color: #000; }
 
-        .loading-line {
-          text-align: center;
-          padding: 60px 20px;
-          color: #666;
-          font-family: ui-monospace, monospace;
-          font-size: 11px;
-          letter-spacing: 2.4px;
-        }
+        .loading-line { text-align: center; padding: 60px 20px; color: #666; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 2.4px; }
 
-        @keyframes cardIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         @media (max-width: 640px) {
