@@ -369,35 +369,76 @@ export default function AdminPanel() {
           </div>
         </section>
 
-        <section className="panel">
-          <div className="panel-head">
-            <span className="p-num">08</span>
-            <h2 className="p-title">РЕЕСТР ЗАБЛОКИРОВАННЫХ</h2>
-            <span className="p-tag">{bannedUsers.length} ЗАПИСЕЙ</span>
-          </div>
-          <div className="panel-body">
-            {bannedUsers.length === 0 ? (
-              <p className="muted">РЕЕСТР ПУСТ</p>
-            ) : (
-              <div className="banned-list">
-                {bannedUsers.map(user => (
-                  <div key={user.userId} className="banned-item">
-                    <div className="bi-id">
-                      <span className="bi-label">ID</span>
-                      <span className="bi-value">{user.userId}</span>
-                      {user.username && <span className="bi-user">// {user.username}</span>}
-                    </div>
-                    <div className="bi-right">
-                      {user.permanent && <span className="bi-badge">🔒 НАВСЕГДА</span>}
-                      <span className="bi-reason">{user.reason || '—'}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+<section className="panel">
+  <div className="panel-head">
+    <span className="p-num">08</span>
+    <h2 className="p-title">РЕЕСТР ЗАБЛОКИРОВАННЫХ</h2>
+    <span className="p-tag">{visibleBanned.length} / {bannedUsers.length}</span>
+  </div>
+  <div className="panel-body">
+    {bannedUsers.length > 0 && (
+      <div className="ban-filters">
+        <input
+          className="field"
+          type="text"
+          placeholder="Поиск по ID, нику или причине..."
+          value={bannedSearch}
+          onChange={(e) => setBannedSearch(e.target.value)}
+          style={{ marginBottom: 0 }}
+        />
+        <select
+          className="field"
+          value={bannedFilter}
+          onChange={(e) => setBannedFilter(e.target.value)}
+          style={{ marginBottom: 0, maxWidth: 220 }}
+        >
+          <option value="all">ВСЕ</option>
+          <option value="permanent">🔒 НАВСЕГДА</option>
+          <option value="temp">⏱ ВРЕМЕННЫЕ</option>
+          <option value="admin">👤 РУЧНЫЕ</option>
+          <option value="autospam">🤖 AUTOSPAM</option>
+          <option value="banword">🤬 BANWORD</option>
+        </select>
+        <a href="/api/admin/export?type=banned" className="btn">⬇ CSV</a>
       </div>
+    )}
+
+    {bannedUsers.length === 0 ? (
+      <p className="muted">РЕЕСТР ПУСТ</p>
+    ) : visibleBanned.length === 0 ? (
+      <p className="muted">НИЧЕГО НЕ НАЙДЕНО</p>
+    ) : (
+      <div className="banned-list">
+        {visibleBanned.map(user => (
+          <div key={user.userId} className="banned-item">
+            <div className="bi-id">
+              <span className="bi-label">ID</span>
+              <span className="bi-value">{user.userId}</span>
+              {user.username && <span className="bi-user">// {user.username}</span>}
+            </div>
+            <div className="bi-right">
+              {user.permanent && <span className="bi-badge">🔒 НАВСЕГДА</span>}
+              {user.source && user.source !== 'admin' && (
+                <span className="bi-source">[{user.source}]</span>
+              )}
+              <span className="bi-reason">{user.reason || '—'}</span>
+              <button
+                className="bi-unban"
+                onClick={() => {
+                  setUserId(user.userId);
+                  handleUnban();
+                }}
+                title="Разбанить"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
 
       <style jsx>{`
         .admin { max-width: 980px; margin: 0 auto; color: #eaeaea; padding-bottom: 20px; }
