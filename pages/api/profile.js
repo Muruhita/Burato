@@ -3,6 +3,7 @@ import { verifyToken } from '../../lib/discord';
 import { containsBadWords } from '../../lib/badwords';
 import { getBanInfo } from '../../lib/ban-utils';
 import { isValidRank } from '../../lib/ranks';
+import { isSafeUrl, TRUSTED_IMAGE_HOSTS } from '../../lib/urlValidator';
 
 const ALLOWED_PRESETS = ['default', 'blue', 'purple', 'green'];
 const MAX_URL_LENGTH = 500;
@@ -19,7 +20,17 @@ function validateCustom(custom) {
   if (custom.type === 'image') {
     const url = String(custom.url || '').trim();
     if (!url || url.length > MAX_URL_LENGTH) return null;
-    if (!/^https?:\/\//i.test(url)) return null;
+
+    // Whitelist: только доверенные хостеры (imgbb, imgur, Discord CDN,
+    // Google Drive, Yandex Disk, GitHub, Cloudinary, Pinterest и т.д.).
+    // Это блокирует tracking-pixel через evil.com, SSRF на приватные IP,
+    // javascript:/data:/file: схемы и прочее.
+    const safe = isSafeUrl(url, {
+      maxLength: MAX_URL_LENGTH,
+      allowedHosts: TRUSTED_IMAGE_HOSTS,
+    });
+    if (!safe) return null;
+
     return { type: 'image', url };
   }
 
