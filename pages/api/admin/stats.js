@@ -1,7 +1,6 @@
-import redis from '../../../lib/redis';
+import redis, { scanKeys } from '../../../lib/redis';
 import { verifyToken } from '../../../lib/discord';
 import { ADMIN_IDS } from '../../../lib/admins';
-import redis, { scanKeys } from '../../../lib/redis';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
