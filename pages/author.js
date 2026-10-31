@@ -31,9 +31,20 @@ export default function AuthorPage() {
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // null = проверка, true = авторизован, false = гость
+  const [isAuthed, setIsAuthed] = useState(null);
+
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 60);
     return () => clearTimeout(t);
+  }, []);
+
+  // Проверяем сессию для кнопки "Назад"
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(d => setIsAuthed(!!d?.user))
+      .catch(() => setIsAuthed(false));
   }, []);
 
   const copyId = async () => {
@@ -43,6 +54,17 @@ export default function AuthorPage() {
       setTimeout(() => setCopied(false), 1800);
     } catch (e) {}
   };
+
+  const handleBack = () => {
+    if (isAuthed === null) return;
+    router.push(isAuthed ? '/dashboard' : '/');
+  };
+
+  const backLabel = isAuthed === null
+    ? 'ЗАГРУЗКА...'
+    : isAuthed
+      ? 'В ПАНЕЛЬ'
+      : 'НА ГЛАВНУЮ';
 
   const now = new Date();
   const year = now.getFullYear();
@@ -54,7 +76,7 @@ export default function AuthorPage() {
         <meta name="description" content="Об авторе Discord-бота FIB Forms" />
       </Head>
 
-      <Layout>
+      <Layout public>
         <div className={`author ${mounted ? 'mounted' : ''}`}>
           {/* ░░ ШАПКА ░░ */}
           <header className="page-head">
@@ -211,6 +233,17 @@ export default function AuthorPage() {
             <span className="af-dash">—</span>
             <span>v7.1.0</span>
           </footer>
+
+          {/* ░░ КНОПКА НАЗАД ░░ */}
+          <div className="back-wrap">
+            <button
+              className="btn"
+              onClick={handleBack}
+              disabled={isAuthed === null}
+            >
+              ← {backLabel}
+            </button>
+          </div>
         </div>
       </Layout>
 
@@ -623,6 +656,37 @@ export default function AuthorPage() {
           animation: fadeIn 0.7s ease;
         }
         .af-dash { color: #333; }
+
+        /* ═══ КНОПКА НАЗАД ═══ */
+        .back-wrap {
+          margin-top: 22px;
+          display: flex;
+          justify-content: center;
+        }
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 11px 18px;
+          background: transparent;
+          border: 1px solid #333;
+          color: #eaeaea;
+          cursor: pointer;
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          transition: all 0.2s;
+        }
+        .btn:hover:not(:disabled) {
+          background: #fff;
+          border-color: #fff;
+          color: #000;
+        }
+        .btn:disabled {
+          opacity: 0.4;
+          cursor: wait;
+        }
 
         /* ═══ АНИМАЦИИ ═══ */
         @keyframes cardIn {
