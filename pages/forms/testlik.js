@@ -5,6 +5,7 @@ import ImageUploader from '../../components/ImageUploader';
 import MultiImageUploader from '../../components/MultiImageUploader';
 import BanOverlay from '../../components/BanOverlay';
 import SubmitOverlay from '../../components/SubmitOverlay';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 
 export default function TestLikPage() {
@@ -13,10 +14,10 @@ export default function TestLikPage() {
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
   const [formData, setFormData] = useState({
     name: '', message: '', category: 'option1', date: '', agree: false, singleImage: '', multiImages: []
@@ -29,11 +30,7 @@ export default function TestLikPage() {
 
   useEffect(() => {
     fetch('/api/profile').then(res => res.json()).then(data => {
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
+      if (data.banned) { setBanned(true); setBanReason(data.banReason || 'Бан'); setBanUntil(data.banUntil || null); }
     }).catch(() => {});
   }, []);
 
@@ -45,20 +42,14 @@ export default function TestLikPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'testlik', ...formData })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20);
-        setTimeout(() => router.push('/dashboard'), 1800);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1800); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -68,9 +59,7 @@ export default function TestLikPage() {
 
   return (
     <>
-      <Head>
-        <title>TESTLAB · FIB Forms</title>
-      </Head>
+      <Head><title>TESTLAB · FIB Forms</title></Head>
       <div className={`lab ${mounted ? 'mounted' : ''}`}>
         <div className="lab-topbar">
           <span className="lt-mark">◆</span><span className="lt-title">FIB · TESTLAB</span><span className="lt-spacer" />
@@ -139,6 +128,7 @@ export default function TestLikPage() {
 
       <SubmitOverlay show={success} text="ТЕСТ ОТПРАВЛЕН" subtext="Проверьте Discord-канал" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
 
       <style jsx global>{`html, body { margin: 0; padding: 0; background: #0a0a0a; overflow-x: hidden; }`}</style>
       <style jsx>{`
