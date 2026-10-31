@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 
 const DEPARTMENTS = [
@@ -18,7 +19,7 @@ const RANKS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'
 
 export default function TransferForm() {
   const router = useRouter();
-  const { cooldown, trigger } = useCooldown('transfer'); // ХУК
+  const { cooldown, trigger } = useCooldown('transfer');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -26,12 +27,9 @@ export default function TransferForm() {
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
-  const [formData, setFormData] = useState({
-    fullName: '', rank: '', currentDepartment: '', targetDepartment: '', reason: '',
-    cidExperience: '', cidExamples: '', cidServers: '', cidKnowledge: '', cidLawKnowledge: '',
-    faRules: '', faPrevious: ''
-  });
+  const [formData, setFormData] = useState({ fullName: '', rank: '', currentDepartment: '', targetDepartment: '', reason: '', cidExperience: '', cidExamples: '', cidServers: '', cidKnowledge: '', cidLawKnowledge: '', faRules: '', faPrevious: '' });
 
   const targetDept = formData.targetDepartment;
   const currentDept = formData.currentDepartment;
@@ -48,11 +46,7 @@ export default function TransferForm() {
       setUser(meData.user);
       if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
       if (profileData.department) setFormData(prev => ({ ...prev, currentDepartment: profileData.department }));
-      if (profileData.banned) {
-        setBanned(true);
-        setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(profileData.banUntil || null);
-      }
+      if (profileData.banned) { setBanned(true); setBanReason(profileData.banReason || 'Бан'); setBanUntil(profileData.banUntil || null); }
       setLoading(false);
     });
   }, []);
@@ -70,20 +64,14 @@ export default function TransferForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'transfer', targetDepartment: formData.targetDepartment, fullName: formData.fullName, rank: formData.rank, currentDepartment: formData.currentDepartment, reason: formData.reason, cidExperience: formData.cidExperience, cidExamples: formData.cidExamples, cidServers: formData.cidServers, cidKnowledge: formData.cidKnowledge, cidLawKnowledge: formData.cidLawKnowledge, faRules: formData.faRules, faPrevious: formData.faPrevious })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20); // Запуск кулдауна
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -157,6 +145,7 @@ export default function TransferForm() {
       </div>
       <SubmitOverlay show={success} text="Заявка на перевод отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
       <style jsx>{`
         .warn { padding: 11px 14px; background: rgba(255, 60, 60, 0.05); border-left: 3px solid #ff4444; color: #ff8080; font-family: ui-monospace, monospace; font-size: 11px; margin-bottom: 18px; }
         .sub-section { border: 1px dashed #2a2a2a; padding: 18px 16px 8px; margin: 22px 0; background: rgba(255,255,255,0.01); }
