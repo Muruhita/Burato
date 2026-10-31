@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 
 export default function ResignationForm() {
@@ -14,21 +15,17 @@ export default function ResignationForm() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({ fullName: '', screenshot: '' });
-
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
   useEffect(() => {
     Promise.all([fetch('/api/me').then(res => res.json()), fetch('/api/profile').then(res => res.json())]).then(([meData, profileData]) => {
       if (!meData.user) { router.push('/'); return; }
       setUser(meData.user);
       if (profileData.nickname) setFormData(prev => ({ ...prev, fullName: profileData.nickname }));
-      if (profileData.banned) {
-        setBanned(true);
-        setBanReason(profileData.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(profileData.banUntil || null);
-      }
+      if (profileData.banned) { setBanned(true); setBanReason(profileData.banReason || 'Бан'); setBanUntil(profileData.banUntil || null); }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -43,20 +40,14 @@ export default function ResignationForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'resignation', fullName: formData.fullName, screenshot: formData.screenshot })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20);
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -91,6 +82,7 @@ export default function ResignationForm() {
       </div>
       <SubmitOverlay show={success} text="Рапорт на увольнение отправлен!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
     </Layout>
   );
 }
