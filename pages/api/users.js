@@ -1,6 +1,5 @@
-import redis from '../../lib/redis';
-import { verifyToken } from '../../lib/discord';
 import redis, { scanKeys } from '../../lib/redis';
+import { verifyToken } from '../../lib/discord';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
