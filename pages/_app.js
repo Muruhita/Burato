@@ -1,7 +1,59 @@
 import Head from 'next/head';
+import { useEffect } from 'react';
 import GlobalBackground from '../components/GlobalBackground';
 
+// ─────────────────────────────────────────────────────────────
+// 🔍 SERVER-SIDE FAIL-FAST
+// Выполняется при каждом cold start serverless-функции и во время
+// SSG-билда. Логирует в Vercel → Logs, если обязательных env нет.
+// Не бросает исключение — чтобы билд preview не падал целиком,
+// но ошибка явно видна в логах.
+// ─────────────────────────────────────────────────────────────
+if (typeof window === 'undefined') {
+  const required = [
+    ['JWT_SECRET',              'аутентификация полностью сломана (все /api → 401)'],
+    ['DISCORD_CLIENT_ID',       'OAuth-логин не работает'],
+    ['DISCORD_CLIENT_SECRET',   'OAuth-логин не работает'],
+    ['DISCORD_REDIRECT_URI',    'OAuth упадёт на обмене code → token'],
+    ['REDIS_URL',               'все данные (профили/заявки/сессии) недоступны'],
+  ];
+  const missing = required.filter(([key]) => !process.env[key]);
+  if (missing.length > 0) {
+    console.error('[FIB] ❌ CRITICAL — missing env vars:');
+    for (const [key, impact] of missing) {
+      console.error(`   • ${key} — ${impact}`);
+    }
+  }
+}
+
 export default function App({ Component, pageProps }) {
+  // ─────────────────────────────────────────────────────────────
+  // 🩺 CLIENT-SIDE HEALTH-CHECK
+  // Раз в сессию проверяем, что /api/me отвечает 200/401, а не 500.
+  // 401 — норма (не залогинен). 5xx — обычно забытая env переменная.
+  // sessionStorage — чтобы не дёргать при каждой навигации.
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') return;
+
+    const key = 'fib:healthchecked';
+    try { if (sessionStorage.getItem(key)) return; } catch {}
+
+    fetch('/api/me')
+      .then((r) => {
+        if (r.status >= 500) {
+          console.error(
+            '[FIB] ❌ /api/me вернул ' + r.status +
+            ' — проверь env: JWT_SECRET / DISCORD_* / REDIS_URL'
+          );
+        }
+        try { sessionStorage.setItem(key, '1'); } catch {}
+      })
+      .catch((e) => {
+        console.warn('[FIB] health-check failed:', e.message);
+      });
+  }, []);
+
   return (
     <>
       <Head>
