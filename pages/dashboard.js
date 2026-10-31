@@ -1,5 +1,6 @@
 import Layout from '../components/Layout';
 import BanOverlay from '../components/BanOverlay';
+import SystemAlert from '../components/SystemAlert';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 
@@ -36,6 +37,9 @@ export default function Dashboard() {
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
 
+  // Стейт для терминального уведомления
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
+
   useEffect(() => {
     fetch('/api/profile')
       .then(res => res.json())
@@ -71,7 +75,12 @@ export default function Dashboard() {
   const handleOpen = (form) => {
     const disabled = form.toggleable && formStatus[form.id] === false;
     if (disabled) {
-      alert('🚫 Эта форма временно отключена администрацией.');
+      // Вызов стилизованного уведомления вместо alert
+      setSysAlert({
+        show: true,
+        title: 'БЛАНК ОТКЛЮЧЕН',
+        message: `Форма "${form.title}" временно недоступна по решению администрации. Пожалуйста, попробуйте позже.`
+      });
       return;
     }
     router.push(form.path);
@@ -200,6 +209,14 @@ export default function Dashboard() {
       </div>
 
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      
+      {/* ВЫЗОВ НОВОГО УВЕДОМЛЕНИЯ */}
+      <SystemAlert 
+        show={sysAlert.show} 
+        title={sysAlert.title} 
+        message={sysAlert.message} 
+        onClose={() => setSysAlert({ ...sysAlert, show: false })} 
+      />
 
       <style jsx>{`
         .dash {
