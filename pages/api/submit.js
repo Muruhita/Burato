@@ -448,6 +448,20 @@ export default async function handler(req, res) {
   } else if (type === 'report') {
     const dept = DEPARTMENTS[department];
     if (!dept) return res.status(400).json({ error: 'Выберите корректный отдел' });
+
+    // Для 9/10 ранга (кроме FA) обязательное подтверждение инструктора.
+    // Клиент это проверяет, но через curl можно обойти — дублируем на сервере.
+    if (
+      formData.targetRank &&
+      ['9', '10'].includes(String(formData.targetRank)) &&
+      department !== 'fa' &&
+      formData.isInstructor !== 'yes'
+    ) {
+      return res.status(400).json({
+        error: 'Для повышения на 9 или 10 ранг нужно подтвердить назначение на инструктора.'
+      });
+    }
+
     webhookUrl = dept.webhook;
     if (!webhookUrl) return res.status(500).json({ error: `Вебхук для "${dept.name}" не настроен` });
     if (dept.roleId) roleMentions += `<@&${dept.roleId}> `;
