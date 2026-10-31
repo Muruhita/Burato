@@ -22,7 +22,11 @@ export default async function handler(req, res) {
 
   const params = new URLSearchParams({
     client_id: process.env.DISCORD_CLIENT_ID,
-    redirect_uri: process.env.DISCORD_REDIRECT_URI || 'https://fib-bt-forms.vercel.app/api/auth',
+redirect_uri: (() => {
+  const uri = process.env.DISCORD_REDIRECT_URI;
+  if (!uri) throw new Error('DISCORD_REDIRECT_URI is not set');
+  return uri;
+})(),
     response_type: 'code',
     scope: 'identify',
     state
