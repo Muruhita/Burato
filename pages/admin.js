@@ -67,17 +67,17 @@ export default function AdminPanel() {
     return () => clearInterval(id);
   }, []);
 
-  const handleUnban = async () => {
-    if (!userId.trim()) return;
-    const res = await fetch('/api/admin/unban', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
-    });
-    const data = await res.json();
-    setStatus(data.message || data.error);
-    loadData();
-  };
+const handleUnban = async () => {
+  if (!userId.trim()) return;
+  const res = await fetch('/api/admin/unban', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId })
+  });
+  const data = await res.json();
+  setStatus(data.message || data.error);
+  loadData();
+};
 
   const handleBan = async () => {
     if (!banUserId.trim()) { setBanMsg('⚠️ Введите Discord ID'); return; }
@@ -651,6 +651,50 @@ export default function AdminPanel() {
           display: flex; flex-direction: column; gap: 8px; max-height: 420px;
           overflow-y: auto; padding-right: 4px;
         }
+
+        .ban-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ban-filters .field { flex: 1 1 220px; }
+.ban-filters .btn {
+  padding: 11px 14px;
+  background: transparent;
+  border: 1px solid #333;
+  color: #ccc;
+  cursor: pointer;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.ban-filters .btn:hover { background: #fff; color: #000; border-color: #fff; }
+.bi-source {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  color: #888;
+  border: 1px solid #2a2a2a;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+.bi-unban {
+  width: 26px; height: 26px;
+  background: transparent;
+  border: 1px solid #553030;
+  color: #ff8080;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.bi-unban:hover { background: #ff4444; border-color: #ff4444; color: #fff; }
+
+        
         .banned-item {
           display: flex; justify-content: space-between; align-items: center;
           gap: 14px; padding: 12px 14px; background: #060606;
