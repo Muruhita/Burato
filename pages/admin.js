@@ -16,6 +16,8 @@ export default function AdminPanel() {
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementMsg, setAnnouncementMsg] = useState('');
   const [stats, setStats] = useState(null);
+  const [bannedSearch, setBannedSearch] = useState('');
+  const [bannedFilter, setBannedFilter] = useState('all'); // all | permanent | temp | admin | autospam | banword
 
   const [banUserId, setBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
