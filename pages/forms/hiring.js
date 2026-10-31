@@ -2,8 +2,10 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
+import DraftBanner from '../../components/DraftBanner';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 export default function HiringForm() {
   const router = useRouter();
@@ -19,6 +21,21 @@ export default function HiringForm() {
     age: '', experience: '', lawKnowledge: '',
     passportScreenshot: '', militaryId: '', medicalCertificates: ''
   });
+
+  // 🆕 Черновик
+  const draft = useFormDraft(
+    'draft:hiring',
+    { nickname, ...formData },
+    {
+      enabled: !banned,
+      onLoad: (saved) => {
+        if (!saved) return;
+        if (saved.nickname !== undefined) setNickname(saved.nickname);
+        const { nickname: _n, ...rest } = saved;
+        setFormData(prev => ({ ...prev, ...rest }));
+      }
+    }
+  );
 
   useEffect(() => {
     fetch('/api/profile')
@@ -58,6 +75,7 @@ export default function HiringForm() {
         body: JSON.stringify({ type: 'hiring', fullName: nickname, ...formData })
       });
       if (res.ok) {
+        draft.clear(); // 🆕 стираем черновик
         setSuccess(true);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
@@ -85,6 +103,8 @@ export default function HiringForm() {
     <Layout>
       <div className="form-page">
         <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
+
+        <DraftBanner {...draft} />
 
         <div className="form-shell">
           <header className="form-head">
