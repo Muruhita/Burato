@@ -4,9 +4,11 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
+import { useCooldown } from '../../hooks/useCooldown';
 
 export default function TransferToFibForm() {
   const router = useRouter();
+  const { cooldown, trigger } = useCooldown('transferToFib');
   const [nickname, setNickname] = useState('');
   const [formData, setFormData] = useState({ approval: '', rankProof: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -17,120 +19,68 @@ export default function TransferToFibForm() {
   const [banUntil, setBanUntil] = useState(null);
 
   useEffect(() => {
-    fetch('/api/profile')
-      .then(res => res.json())
-      .then(data => {
-        if (data.nickname) setNickname(data.nickname);
-        if (data.banned) {
-          setBanned(true);
-          setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(data.banUntil || null);
-        }
-      })
-      .catch(() => {});
+    fetch('/api/profile').then(res => res.json()).then(data => {
+      if (data.nickname) setNickname(data.nickname);
+      if (data.banned) {
+        setBanned(true);
+        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
+        setBanUntil(data.banUntil || null);
+      }
+    }).catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!formData.approval) {
-      alert('⚠️ Загрузите одобрение от начальства.');
-      return;
-    }
-    if (!formData.rankProof) {
-      alert('⚠️ Загрузите доказательство ранга.');
-      return;
-    }
+    if (!formData.approval) { alert('⚠️ Загрузите одобрение от начальства.'); return; }
+    if (!formData.rankProof) { alert('⚠️ Загрузите доказательство ранга.'); return; }
 
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'transferToFib',
-          fullName: nickname,
-          approval: formData.approval,
-          rankProof: formData.rankProof
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'transferToFib', fullName: nickname, approval: formData.approval, rankProof: formData.rankProof })
       });
       if (res.ok) {
         setSuccess(true);
+        trigger(20);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
       if (res.status === 403) {
         const err = await res.json();
-        if (err.banned) {
-          setBanned(true);
-          setBanReason(err.reason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(err.until || null);
-          setSubmitting(false);
-          return;
-        }
+        if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
         throw new Error(err.error || 'Доступ запрещён');
       }
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
-    } catch (error) {
-      alert('❌ ' + error.message);
-      setSubmitting(false);
-    }
+    } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
   return (
     <Layout>
       <div className="form-page">
         <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
-
         <div className="form-shell">
           <header className="form-head">
             <div className="fh-stamp">FORM-007 · TRANSFER</div>
             <h1 className="fh-title">Перевод в FIB</h1>
-            <p className="fh-sub">
-              Заявка на перевод в Federal Investigation Bureau из другой фракции. Требуется одобрение начальства.
-            </p>
+            <p className="fh-sub">Заявка на перевод в Federal Investigation Bureau из другой фракции. Требуется одобрение начальства.</p>
             <div className="fh-rule" />
           </header>
-
           <form onSubmit={handleSubmit} className="form-body">
             <div className="field-block">
               <label className="lbl">Имя Фамилия + Статик</label>
-              <input
-                className="field"
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                required
-                placeholder="Name Surname 123456"
-              />
+              <input className="field" type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} required placeholder="Name Surname 123456" />
             </div>
-
-            <ImageUploader
-              label="Одобрение от начальства"
-              value={formData.approval}
-              onChange={(url) => setFormData(prev => ({ ...prev, approval: url }))}
-              allowManualUrl
-            />
-
-            <ImageUploader
-              label="Доказательство ранга (скрин с планшета)"
-              value={formData.rankProof}
-              onChange={(url) => setFormData(prev => ({ ...prev, rankProof: url }))}
-              allowManualUrl
-            />
-
-            <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting
-                ? <><span className="btn-spinner" /> ОТПРАВКА...</>
-                : banned
-                  ? '🚫 ДОСТУП ЗАБЛОКИРОВАН'
-                  : '→ ОТПРАВИТЬ'}
+            <ImageUploader label="Одобрение от начальства" value={formData.approval} onChange={(url) => setFormData(prev => ({ ...prev, approval: url }))} allowManualUrl />
+            <ImageUploader label="Доказательство ранга (скрин с планшета)" value={formData.rankProof} onChange={(url) => setFormData(prev => ({ ...prev, rankProof: url }))} allowManualUrl />
+            <button type="submit" className="submit-btn" disabled={submitting || success || banned || cooldown > 0}>
+              {cooldown > 0 ? `⏳ ПОДОЖДИТЕ ${cooldown} СЕК...` : submitting ? 'ОТПРАВКА...' : banned ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' : '→ ОТПРАВИТЬ'}
             </button>
           </form>
         </div>
       </div>
-
       <SubmitOverlay show={success} text="Заявка в FIB отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
     </Layout>
