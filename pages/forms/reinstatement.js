@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 import { RANKS } from '../../lib/ranks';
 
@@ -14,26 +15,22 @@ export default function ReinstatementForm() {
   const [formData, setFormData] = useState({ rank: '', proof: '', wasBannedWarned: 'no', approvalLink: '' });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
   useEffect(() => {
     fetch('/api/profile').then(res => res.json()).then(data => {
       if (data.nickname) setNickname(data.nickname);
       if (data.rank) setFormData(prev => ({ ...prev, rank: data.rank }));
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
+      if (data.banned) { setBanned(true); setBanReason(data.banReason || 'Бан'); setBanUntil(data.banUntil || null); }
     }).catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.proof) { alert('⚠️ Загрузите доказательства (последнее повышение + увольнение).'); return; }
+    if (!formData.proof) { alert('⚠️ Загрузите доказательства.'); return; }
     if (formData.wasBannedWarned === 'yes' && !formData.approvalLink) { alert('⚠️ Загрузите ссылку на одобрение.'); return; }
 
     setSubmitting(true);
@@ -42,20 +39,14 @@ export default function ReinstatementForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'reinstatement', fullName: nickname, ...formData })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20);
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -86,9 +77,7 @@ export default function ReinstatementForm() {
             <div className="field-block">
               <label className="lbl">Уволен после Ban/Warn?</label>
               <select className="field" value={formData.wasBannedWarned} onChange={(e) => setFormData({ ...formData, wasBannedWarned: e.target.value })}>
-                <option value="idk">Не помню</option>
-                <option value="no">Нет</option>
-                <option value="yes">Да</option>
+                <option value="idk">Не помню</option><option value="no">Нет</option><option value="yes">Да</option>
               </select>
             </div>
             {formData.wasBannedWarned === 'yes' && (
@@ -102,6 +91,7 @@ export default function ReinstatementForm() {
       </div>
       <SubmitOverlay show={success} text="Заявка на восстановление отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
     </Layout>
   );
 }
