@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import MultiImageUploader from '../../components/MultiImageUploader';
+import { useCooldown } from '../../hooks/useCooldown'; // <--- ИМПОРТ
 
 const DEPARTMENTS = [
   { id: 'ib', name: 'IB (Intelligence Branch)' }, { id: 'cid', name: 'CID (Criminal Investigation)' },
@@ -17,6 +18,10 @@ const RANKS = ['1','2','3','4','5','6','7','8','9','10'];
 
 export default function ReportForm() {
   const router = useRouter();
+  
+  // ИСПОЛЬЗУЕМ ХУК (у каждой формы свой ключ)
+  const { cooldown, trigger } = useCooldown('report'); 
+  
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -68,11 +73,20 @@ export default function ReportForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'report', department: formData.department, fullName: formData.fullName, currentRank: formData.currentRank, targetRank: formData.targetRank, isInstructor: formData.isInstructor || 'no', workLinks: formData.workLinks, workImages: formData.workImages })
       });
+      
       if (res.ok) {
         setSuccess(true);
+        trigger(20); // <--- ВКЛЮЧАЕМ КУЛДАУН ПОСЛЕ УСПЕХА
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
+      
+      if (res.status === 429) {
+        // Если сработал серверный антиспам
+        trigger(20); // <--- ВКЛЮЧАЕМ КУЛДАУН
+        throw new Error('Слишком много запросов. Подождите.');
+      }
+
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
@@ -80,7 +94,10 @@ export default function ReportForm() {
       }
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
-    } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
+    } catch (error) { 
+      alert('❌ ' + error.message); 
+      setSubmitting(false); 
+    }
   };
 
   if (loading) return <Layout><div className="loading-line">ЗАГРУЗКА ДАННЫХ...</div></Layout>;
@@ -140,8 +157,16 @@ export default function ReportForm() {
               <label className="lbl">Discord (автоматически)</label>
               <input className="field" type="text" value={user ? `${user.username} (${user.id})` : ''} disabled style={{ opacity: 0.45 }} />
             </div>
-            <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting ? 'ОТПРАВКА...' : banned ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' : '→ ОТПРАВИТЬ ОТЧЁТ'}
+            
+            {/* БЛОКИРОВКА КНОПКИ ВО ВРЕМЯ КУЛДАУНА */}
+            <button type="submit" className="submit-btn" disabled={submitting || success || banned || cooldown > 0}>
+              {cooldown > 0 
+                ? `⏳ ПОДОЖДИТЕ ${cooldown} СЕК...` 
+                : submitting 
+                  ? 'ОТПРАВКА...' 
+                  : banned 
+                    ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' 
+                    : '→ ОТПРАВИТЬ ОТЧЁТ'}
             </button>
           </form>
         </div>
