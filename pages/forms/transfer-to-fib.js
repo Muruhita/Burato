@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
+import SystemAlert from '../../components/SystemAlert';
 import { useCooldown } from '../../hooks/useCooldown';
 
 export default function TransferToFibForm() {
@@ -13,19 +14,15 @@ export default function TransferToFibForm() {
   const [formData, setFormData] = useState({ approval: '', rankProof: '' });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-
   const [banned, setBanned] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
+  const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
   useEffect(() => {
     fetch('/api/profile').then(res => res.json()).then(data => {
       if (data.nickname) setNickname(data.nickname);
-      if (data.banned) {
-        setBanned(true);
-        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-        setBanUntil(data.banUntil || null);
-      }
+      if (data.banned) { setBanned(true); setBanReason(data.banReason || 'Бан'); setBanUntil(data.banUntil || null); }
     }).catch(() => {});
   }, []);
 
@@ -40,20 +37,14 @@ export default function TransferToFibForm() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'transferToFib', fullName: nickname, approval: formData.approval, rankProof: formData.rankProof })
       });
-      if (res.ok) {
-        setSuccess(true);
-        trigger(20);
-        setTimeout(() => router.push('/dashboard'), 1400);
-        return;
-      }
-      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
+      if (res.ok) { setSuccess(true); trigger(20); setTimeout(() => router.push('/dashboard'), 1400); return; }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов.'); }
       if (res.status === 403) {
         const err = await res.json();
         if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
-        throw new Error(err.error || 'Доступ запрещён');
+        setSysAlert({ show: true, title: 'ДОСТУП ЗАПРЕЩЕН', message: err.error || 'Подача заявок остановлена.' }); setSubmitting(false); return;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Ошибка');
+      throw new Error((await res.json()).error || 'Ошибка');
     } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
@@ -83,6 +74,7 @@ export default function TransferToFibForm() {
       </div>
       <SubmitOverlay show={success} text="Заявка в FIB отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
+      <SystemAlert show={sysAlert.show} title={sysAlert.title} message={sysAlert.message} onClose={() => setSysAlert({ ...sysAlert, show: false })} />
     </Layout>
   );
 }
