@@ -19,7 +19,6 @@ export default function ClaimForm() {
   const [banReason, setBanReason] = useState('');
   const [banUntil, setBanUntil] = useState(null);
 
-  // Стейт для терминального уведомления
   const [sysAlert, setSysAlert] = useState({ show: false, title: '', message: '' });
 
   useEffect(() => {
@@ -60,6 +59,8 @@ export default function ClaimForm() {
       
       if (res.status === 403) {
         const err = await res.json();
+        
+        // 1. Если это бан
         if (err.banned) { 
           setBanned(true); 
           setBanReason(err.reason || 'Бан'); 
@@ -68,19 +69,16 @@ export default function ClaimForm() {
           return; 
         }
         
-        // Если форма была отключена, пока пользователь её заполнял
-        if (err.error && err.error.includes('отключена')) {
-          setSysAlert({
-            show: true,
-            title: 'СИСТЕМА ЗАБЛОКИРОВАНА',
-            message: 'Администрация только что отключила эту форму. Ваша заявка не будет отправлена. Пожалуйста, вернитесь позже.'
-          });
-          setSubmitting(false);
-          return;
-        }
-        
-        throw new Error(err.error || 'Доступ запрещён');
+        // 2. Если форма отключена (глобально или точечно) - показываем красивый алерт
+        setSysAlert({
+          show: true,
+          title: 'ДОСТУП ЗАПРЕЩЕН',
+          message: err.error || 'Подача заявок временно остановлена администрацией.'
+        });
+        setSubmitting(false);
+        return;
       }
+      
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
     } catch (error) {
@@ -169,7 +167,7 @@ export default function ClaimForm() {
       <SubmitOverlay show={success} text="Жалоба отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
       
-      {/* ВЫЗОВ НОВОГО УВЕДОМЛЕНИЯ */}
+      {/* ВЫЗОВ КРАСИВОГО УВЕДОМЛЕНИЯ */}
       <SystemAlert 
         show={sysAlert.show} 
         title={sysAlert.title} 
