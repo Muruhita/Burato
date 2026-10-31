@@ -4,9 +4,11 @@ import BanOverlay from '../../components/BanOverlay';
 import ImageUploader from '../../components/ImageUploader';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useCooldown } from '../../hooks/useCooldown';
 
 export default function HiringForm() {
   const router = useRouter();
+  const { cooldown, trigger } = useCooldown('hiring'); // ХУК
   const [nickname, setNickname] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -21,22 +23,18 @@ export default function HiringForm() {
   });
 
   useEffect(() => {
-    fetch('/api/profile')
-      .then(res => res.json())
-      .then(data => {
-        if (data.nickname) setNickname(data.nickname);
-        if (data.banned) {
-          setBanned(true);
-          setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(data.banUntil || null);
-        }
-      })
-      .catch(() => {});
+    fetch('/api/profile').then(res => res.json()).then(data => {
+      if (data.nickname) setNickname(data.nickname);
+      if (data.banned) {
+        setBanned(true);
+        setBanReason(data.banReason || 'Ваш доступ к системе заявок заблокирован.');
+        setBanUntil(data.banUntil || null);
+      }
+    }).catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.passportScreenshot) { alert('⚠️ Загрузите скриншот паспорта.'); return; }
     if (!formData.militaryId) { alert('⚠️ Загрузите военный билет.'); return; }
     if (!formData.medicalCertificates) { alert('⚠️ Загрузите медицинские справки.'); return; }
@@ -44,65 +42,50 @@ export default function HiringForm() {
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'hiring', fullName: nickname, ...formData })
       });
       if (res.ok) {
         setSuccess(true);
+        trigger(20); // Запуск кулдауна
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
       }
+      if (res.status === 429) { trigger(20); throw new Error('Слишком много запросов. Подождите.'); }
       if (res.status === 403) {
         const err = await res.json();
-        if (err.banned) {
-          setBanned(true);
-          setBanReason(err.reason || 'Ваш доступ к системе заявок заблокирован.');
-          setBanUntil(err.until || null);
-          setSubmitting(false);
-          return;
-        }
+        if (err.banned) { setBanned(true); setBanReason(err.reason || 'Бан'); setBanUntil(err.until || null); setSubmitting(false); return; }
         throw new Error(err.error || 'Доступ запрещён');
       }
       const err = await res.json();
       throw new Error(err.error || 'Ошибка');
-    } catch (error) {
-      alert('❌ ' + error.message);
-      setSubmitting(false);
-    }
+    } catch (error) { alert('❌ ' + error.message); setSubmitting(false); }
   };
 
   return (
     <Layout>
       <div className="form-page">
         <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
-
         <div className="form-shell">
           <header className="form-head">
             <div className="fh-stamp">FORM-010 · RECRUIT</div>
             <h1 className="fh-title">Трудоустройство в FIB</h1>
-            <p className="fh-sub">
-              Заявка на вступление в Federal Investigation Bureau. Приложите скриншоты паспорта, военного билета и мед. справок.
-            </p>
+            <p className="fh-sub">Заявка на вступление в Federal Investigation Bureau. Приложите скриншоты паспорта, военного билета и мед. справок.</p>
             <div className="fh-rule" />
           </header>
-
           <form onSubmit={handleSubmit} className="form-body">
             <div className="field-block">
               <label className="lbl">Имя Фамилия + Статик</label>
               <input className="field" type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} required placeholder="Name Surname | 123456" />
             </div>
-
             <div className="field-block">
               <label className="lbl">Возраст (RP)</label>
               <input className="field" type="number" value={formData.age} onChange={(e) => setFormData({ ...formData, age: e.target.value })} required placeholder="22" />
             </div>
-
             <div className="field-block">
               <label className="lbl">Опыт работы</label>
               <textarea className="field" value={formData.experience} onChange={(e) => setFormData({ ...formData, experience: e.target.value })} required rows="3" placeholder="Были ли в других организациях? Опишите..." />
             </div>
-
             <div className="field-block">
               <label className="lbl">Знание законов RP (1–10)</label>
               <select className="field" value={formData.lawKnowledge} onChange={(e) => setFormData({ ...formData, lawKnowledge: e.target.value })} required>
@@ -110,18 +93,15 @@ export default function HiringForm() {
                 {['1','2','3','4','5','6','7','8','9','10'].map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
-
             <ImageUploader label="Скриншот паспорта" value={formData.passportScreenshot} onChange={(url) => setFormData(prev => ({ ...prev, passportScreenshot: url }))} allowManualUrl />
             <ImageUploader label="Военный билет" value={formData.militaryId} onChange={(url) => setFormData(prev => ({ ...prev, militaryId: url }))} allowManualUrl />
             <ImageUploader label="Медицинские справки" value={formData.medicalCertificates} onChange={(url) => setFormData(prev => ({ ...prev, medicalCertificates: url }))} allowManualUrl />
-
-            <button type="submit" className="submit-btn" disabled={submitting || success || banned}>
-              {submitting ? <><span className="btn-spinner" /> ОТПРАВКА...</> : banned ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' : '→ ОТПРАВИТЬ ЗАЯВКУ'}
+            <button type="submit" className="submit-btn" disabled={submitting || success || banned || cooldown > 0}>
+              {cooldown > 0 ? `⏳ ПОДОЖДИТЕ ${cooldown} СЕК...` : submitting ? 'ОТПРАВКА...' : banned ? '🚫 ДОСТУП ЗАБЛОКИРОВАН' : '→ ОТПРАВИТЬ ЗАЯВКУ'}
             </button>
           </form>
         </div>
       </div>
-
       <SubmitOverlay show={success} text="Заявка на трудоустройство отправлена!" />
       <BanOverlay show={banned} reason={banReason} until={banUntil} />
     </Layout>
