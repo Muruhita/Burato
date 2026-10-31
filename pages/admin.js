@@ -24,6 +24,16 @@ export default function AdminPanel() {
   const [banPermanent, setBanPermanent] = useState(false);
   const [banMsg, setBanMsg] = useState('');
 
+  const visibleBanned = bannedUsers.filter(u => {
+  if (bannedFilter === 'permanent' && !u.permanent) return false;
+  if (bannedFilter === 'temp' && u.permanent) return false;
+  if (['admin','autospam','banword'].includes(bannedFilter) && u.source !== bannedFilter) return false;
+  const q = bannedSearch.toLowerCase().trim();
+  if (!q) return true;
+  const hay = `${u.userId} ${u.username || ''} ${u.reason || ''}`.toLowerCase();
+  return hay.includes(q);
+});
+
   const loadData = async () => {
     const res = await fetch('/api/admin/list');
     const data = await res.json();
