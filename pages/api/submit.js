@@ -68,7 +68,7 @@ const EMBED_IMAGE_HOSTS = [
 // ─────────────────────────────────────────────────────────────
 // 🧵 Форум отпусков — вебхук + ID веток
 // ─────────────────────────────────────────────────────────────
-const FORUM_LEAVE_WEBHOOK = process.env.WEBHOOK_LEAVE;
+const FORUM_LEAVE_WEBHOOK = process.env.WEBHOOK_LEAVE_FORUM;
 
 const LEAVE_THREADS = {
   IC:  '1479695882302787624',
@@ -275,13 +275,17 @@ function collectUrlFields(formData) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // ─────────────────────────────────────────────────
+  // 🔐 1. Аутентификация
+  // ─────────────────────────────────────────────────
   const token = req.cookies.token;
   const user = verifyToken(token);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const isActive = await isFormSubmissionActive();
-  if (!isActive) return res.status(403).json({ error: '🚫 Подача заявок остановлена администрацией.' });
-
+  // ─────────────────────────────────────────────────
+  // 🔨 2. Бан — ПЕРВЫМ. Забаненный юзер не должен
+  //    сжигать квоту / проходить какие-либо проверки.
+  // ─────────────────────────────────────────────────
   const banInfo = await getBanInfo(user.id);
   if (banInfo.banned) {
     return res.status(403).json({
@@ -291,9 +295,15 @@ export default async function handler(req, res) {
     });
   }
 
-  const spamCheck = await checkSpam(user.id, user.username);
-  if (spamCheck.isSpam) return res.status(429).json({ error: spamCheck.message });
+  // ─────────────────────────────────────────────────
+  // 🚧 3. Глобальный переключатель заявок
+  // ─────────────────────────────────────────────────
+  const isActive = await isFormSubmissionActive();
+  if (!isActive) return res.status(403).json({ error: '🚫 Подача заявок остановлена администрацией.' });
 
+  // ─────────────────────────────────────────────────
+  // 📦 4. Разбор и санитайз тела запроса (один раз)
+  // ─────────────────────────────────────────────────
   const { type, department, targetDepartment, leaveType, ...rawFormData } = req.body;
   const formData = sanitizeObject(rawFormData, 1000);
   if (leaveType) formData.leaveType = leaveType;
@@ -302,7 +312,9 @@ export default async function handler(req, res) {
   const username = user.username;
 
   // ─────────────────────────────────────────────────
-  // 🎯 Точечная блокировка отдельных форм (ДБ, УКМБ)
+  // 🎯 5. Точечный тумблер (db / ukmb).
+  //    ВАЖНО: до checkSpam, чтобы выключенная форма
+  //    не жгла квоту и не приводила к автобану.
   // ─────────────────────────────────────────────────
   if (TYPE_TOGGLES.includes(type)) {
     const typeActive = await isFormTypeActive(type);
@@ -312,7 +324,7 @@ export default async function handler(req, res) {
   }
 
   // ─────────────────────────────────────────────────
-  // 🔒 Слой 1: whitelist + протоколы + приватные IP
+  // 🔒 6. Whitelist + протоколы + приватные IP
   // ─────────────────────────────────────────────────
   const unsafeLinks = collectUrlFields(formData);
   if (unsafeLinks.length > 0) {
@@ -328,7 +340,7 @@ export default async function handler(req, res) {
   }
 
   // ─────────────────────────────────────────────────
-  // 🔒 Слой 2: Google Safe Browsing
+  // 🔒 7. Google Safe Browsing
   // ─────────────────────────────────────────────────
   const allText = Object.values(formData).filter(v => typeof v === 'string').join(' ');
   const allUrls = extractUrls(allText);
@@ -350,7 +362,9 @@ export default async function handler(req, res) {
     }
   }
 
-  // 🚫 Банворды
+  // ─────────────────────────────────────────────────
+  // 🚫 8. Банворды → автобан на 7 дней
+  // ─────────────────────────────────────────────────
   if (containsBadWords(allText)) {
     const foundWords = findAllBadWords(allText);
     const foundWord = findBadWord(allText);
@@ -376,6 +390,9 @@ export default async function handler(req, res) {
     });
   }
 
+  // ─────────────────────────────────────────────────
+  // 📡 9. Выбор вебхука / ролей / ветки по типу формы
+  // ─────────────────────────────────────────────────
   let webhookUrl;
   let roleMentions = '';
   let leaveThreadId = null;
@@ -410,6 +427,7 @@ export default async function handler(req, res) {
     roleMentions = '<@&1385513451077636136>';
   } else if (type === 'leave') {
     webhookUrl = FORUM_LEAVE_WEBHOOK;
+    if (!webhookUrl) return res.status(500).json({ error: 'Вебхук для отпусков не настроен (WEBHOOK_LEAVE_FORUM)' });
     leaveThreadId = LEAVE_THREADS[leaveType] || LEAVE_THREADS.IC;
 
     const position = formData.position || '';
@@ -459,6 +477,9 @@ export default async function handler(req, res) {
     roleMentions = '<@&1274110499356934211>';
   }
 
+  // ─────────────────────────────────────────────────
+  // 🧩 10. Сборка embed
+  // ─────────────────────────────────────────────────
   const embed = {
     title: getFormTitle(type, department, targetDepartment),
     color: getFormColor(type),
@@ -475,6 +496,17 @@ export default async function handler(req, res) {
     embed.image = { url: formData.screenshot };
   }
 
+  // ─────────────────────────────────────────────────
+  // 🚦 11. Spam-лимит — ПОСЛЕДНИМ.
+  //     Квота тратится только на валидные попытки:
+  //     форма включена, URL чистые, badwords нет.
+  // ─────────────────────────────────────────────────
+  const spamCheck = await checkSpam(user.id, user.username);
+  if (spamCheck.isSpam) return res.status(429).json({ error: spamCheck.message });
+
+  // ─────────────────────────────────────────────────
+  // 📤 12. Отправка в Discord
+  // ─────────────────────────────────────────────────
   const result = await sendToDiscord(
     webhookUrl,
     {
@@ -496,6 +528,9 @@ export default async function handler(req, res) {
     targetDepartment
   }).catch(e => console.error('[submit] submission log error:', e.message));
 
+  // ─────────────────────────────────────────────────
+  // 📊 13. Статистика (только при успешной отправке)
+  // ─────────────────────────────────────────────────
   if (result.success) {
     try {
       const now = new Date();
@@ -632,7 +667,7 @@ function buildFields(type, department, targetDepartment, data, userId, username)
     ];
   }
 
-if (type === 'report') {
+  if (type === 'report') {
     const dept = DEPARTMENTS[department];
     const instructorText = data.isInstructor === 'yes' ? '✅ Да' : '❌ Нет';
 
@@ -764,7 +799,7 @@ if (type === 'report') {
     ];
   }
 
-if (type === 'highrank') {
+  if (type === 'highrank') {
     const fields = [
       { name: '👤 Имя Фамилия + Статик', value: data.fullName || 'Не указано', inline: false },
       { name: '📊 С какого - на какой ранг', value: data.rankRange || 'Не указано', inline: false }
