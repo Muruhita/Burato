@@ -4,8 +4,6 @@ import Layout from '../../components/Layout';
 import SubmitOverlay from '../../components/SubmitOverlay';
 import BanOverlay from '../../components/BanOverlay';
 import MultiImageUploader from '../../components/MultiImageUploader';
-import DraftBanner from '../../components/DraftBanner';
-import { useFormDraft } from '../../hooks/useFormDraft';
 
 const DEPARTMENTS = [
   { id: 'ib', name: 'IB (Intelligence Branch)' }, { id: 'cid', name: 'CID (Criminal Investigation)' },
@@ -31,18 +29,6 @@ export default function ReportForm() {
     fullName: '', department: '', currentRank: '', targetRank: '',
     isInstructor: '', workLinks: '', workImages: []
   });
-
-  const draft = useFormDraft(
-    'draft:report',
-    { fullName: formData.fullName, department: formData.department, currentRank: formData.currentRank, targetRank: formData.targetRank, isInstructor: formData.isInstructor, workLinks: formData.workLinks, workImages: formData.workImages },
-    {
-      enabled: !banned,
-      onLoad: (saved) => {
-        if (!saved) return;
-        setFormData(prev => ({ ...prev, ...saved }));
-      }
-    }
-  );
 
   const targetRankNum = parseInt(formData.targetRank);
   const showInstructorField = (targetRankNum === 9 || targetRankNum === 10) && formData.department !== 'fa';
@@ -83,7 +69,6 @@ export default function ReportForm() {
         body: JSON.stringify({ type: 'report', department: formData.department, fullName: formData.fullName, currentRank: formData.currentRank, targetRank: formData.targetRank, isInstructor: formData.isInstructor || 'no', workLinks: formData.workLinks, workImages: formData.workImages })
       });
       if (res.ok) {
-        draft.clear();
         setSuccess(true);
         setTimeout(() => router.push('/dashboard'), 1400);
         return;
@@ -104,7 +89,6 @@ export default function ReportForm() {
     <Layout>
       <div className="form-page">
         <button onClick={() => router.push('/dashboard')} className="back-btn">← НАЗАД К БЛАНКАМ</button>
-        <DraftBanner {...draft} />
         <div className="form-shell">
           <header className="form-head">
             <div className="fh-stamp">FORM-003 · REPORT</div>
