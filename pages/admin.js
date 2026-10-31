@@ -66,7 +66,6 @@ export default function AdminPanel() {
     return () => clearInterval(id);
   }, []);
 
-  // ─── Фильтрация банов ───
   const visibleBanned = useMemo(() => {
     return bannedUsers.filter(u => {
       if (bannedFilter === 'permanent' && !u.permanent) return false;
@@ -84,19 +83,11 @@ export default function AdminPanel() {
     const res = await fetch('/api/admin/ban', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: banUserId,
-        reason: banReason,
-        username: 'Админ',
-        permanent: banPermanent
-      })
+      body: JSON.stringify({ userId: banUserId, reason: banReason, username: 'Админ', permanent: banPermanent })
     });
     const data = await res.json();
     setBanMsg(data.message || data.error);
-    loadData();
-    setBanUserId('');
-    setBanReason('');
-    setBanPermanent(false);
+    loadData(); setBanUserId(''); setBanReason(''); setBanPermanent(false);
   };
 
   const handleUnban = async (id = unbanUserId) => {
@@ -108,57 +99,42 @@ export default function AdminPanel() {
     });
     const data = await res.json();
     setStatus(data.message || data.error);
-    loadData();
-    setUnbanUserId('');
+    loadData(); setUnbanUserId('');
   };
 
   const toggleForms = async () => {
     const res = await fetch('/api/admin/toggle-forms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: !formsActive })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: !formsActive })
     });
-    const data = await res.json();
-    setFormsActive(data.formsActive);
-    loadData();
+    const data = await res.json(); setFormsActive(data.formsActive); loadData();
   };
 
   const toggleFormType = async (type) => {
     const current = formTypes[type] !== false;
     const res = await fetch('/api/admin/toggle-form-type', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, status: !current })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, status: !current })
     });
     const data = await res.json();
-    if (data.type) {
-      setFormTypes(prev => ({ ...prev, [data.type]: data.status }));
-    }
+    if (data.type) setFormTypes(prev => ({ ...prev, [data.type]: data.status }));
     loadData();
   };
 
   const saveAnnouncement = async () => {
     const res = await fetch('/api/announcement', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: announcementText })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: announcementText })
     });
-    const data = await res.json();
-    setAnnouncementMsg(data.message || data.error);
-    setAnnouncement(announcementText.trim());
+    const data = await res.json(); setAnnouncementMsg(data.message || data.error); setAnnouncement(announcementText.trim());
   };
 
   const clearAnnouncement = async () => {
     const res = await fetch('/api/announcement', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '' })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: '' })
     });
-    const data = await res.json();
-    setAnnouncementMsg(data.message || data.error);
-    setAnnouncementText('');
-    setAnnouncement('');
+    const data = await res.json(); setAnnouncementMsg(data.message || data.error); setAnnouncementText(''); setAnnouncement('');
   };
+
+  // Для графика
+  const maxTypeVal = stats?.types ? Math.max(...Object.values(stats.types), 1) : 1;
 
   return (
     <Layout>
@@ -175,46 +151,32 @@ export default function AdminPanel() {
           <div className="panel-head">
             <span className="p-num">01</span>
             <h2 className="p-title">ГЛОБАЛЬНОЕ УВЕДОМЛЕНИЕ</h2>
-            <span className={`p-tag ${announcement ? 'p-tag-on' : ''}`}>
-              {announcement ? 'АКТИВНО' : 'ПУСТО'}
-            </span>
+            <span className={`p-tag ${announcement ? 'p-tag-on' : ''}`}>{announcement ? 'АКТИВНО' : 'ПУСТО'}</span>
           </div>
           <div className="panel-body">
             <label className="lbl">ТЕКСТ ОБЪЯВЛЕНИЯ</label>
-            <textarea
-              className="field"
-              value={announcementText}
-              onChange={(e) => setAnnouncementText(e.target.value)}
-              rows="3"
-              placeholder="Например: Завтра формы закрыты с 12:00 до 14:00"
-            />
-            <div className="row">
+            <textarea className="field" value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} rows="2" placeholder="Текст..." />
+            <div className="row" style={{ marginTop: 12 }}>
               <button className="btn" onClick={saveAnnouncement}>💾 СОХРАНИТЬ</button>
-              {announcement && (
-                <button className="btn btn-danger" onClick={clearAnnouncement}>✕ УДАЛИТЬ</button>
-              )}
+              {announcement && <button className="btn btn-danger" onClick={clearAnnouncement}>✕ УДАЛИТЬ</button>}
             </div>
             {announcementMsg && <p className="msg">{announcementMsg}</p>}
           </div>
         </section>
 
-        {/* 02. СТАТИСТИКА И ЭКСПОРТ */}
+        {/* 02. СТАТИСТИКА И ГРАФИК */}
         <section className="panel">
           <div className="panel-head">
             <span className="p-num">02</span>
             <h2 className="p-title">СТАТИСТИКА ЗАЯВОК</h2>
-            <span className="p-tag">LIVE & EXPORT</span>
+            <span className="p-tag">LIVE & CHARTS</span>
           </div>
           <div className="panel-body">
             {stats ? (
               <>
                 <div className="stats-grid">
                   {[
-                    ['ВСЕГО', stats.total],
-                    ['СЕГОДНЯ', stats.today],
-                    ['ЗА НЕДЕЛЮ', stats.thisWeek],
-                    ['ЗА МЕСЯЦ', stats.thisMonth],
-                    ['ЮЗЕРОВ', stats.activeUsers],
+                    ['ВСЕГО', stats.total], ['СЕГОДНЯ', stats.today], ['ЗА НЕДЕЛЮ', stats.thisWeek], ['ЗА МЕСЯЦ', stats.thisMonth]
                   ].map(([label, value]) => (
                     <div key={label} className="stat">
                       <div className="stat-val">{value}</div>
@@ -222,16 +184,30 @@ export default function AdminPanel() {
                     </div>
                   ))}
                 </div>
-                <div className="export-grid" style={{ marginTop: 20 }}>
+
+                {stats.types && Object.keys(stats.types).length > 0 && (
+                  <div className="chart-container">
+                    <div className="chart-title">РАСПРЕДЕЛЕНИЕ ПО ТИПАМ ФОРМ</div>
+                    {Object.entries(stats.types).map(([type, count]) => (
+                      <div key={type} className="chart-row">
+                        <span className="chart-label">{type.toUpperCase()}</span>
+                        <div className="chart-bar-wrap">
+                          <div className="chart-bar" style={{ width: `${(count / maxTypeVal) * 100}%` }} />
+                        </div>
+                        <span className="chart-val">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="export-grid" style={{ marginTop: 24 }}>
                   <a href="/api/admin/export?type=banned" className="btn">⬇ СКАЧАТЬ БАНЫ (CSV)</a>
                   <a href="/api/admin/export?type=users" className="btn">⬇ РЕЕСТР ЮЗЕРОВ (CSV)</a>
                   <a href="/api/admin/export?type=stats" className="btn">⬇ СТАТИСТИКА (CSV)</a>
                   <a href="/api/admin/export?type=audit" className="btn">⬇ АУДИТ (CSV)</a>
                 </div>
               </>
-            ) : (
-              <p className="muted">ЗАГРУЗКА ДАННЫХ...</p>
-            )}
+            ) : <p className="muted">ЗАГРУЗКА ДАННЫХ...</p>}
           </div>
         </section>
 
@@ -240,45 +216,27 @@ export default function AdminPanel() {
           <div className="panel-head">
             <span className="p-num">03</span>
             <h2 className="p-title">УПРАВЛЕНИЕ ЗАЯВКАМИ</h2>
-            <span className={`p-tag ${formsActive ? 'p-tag-on' : 'p-tag-off'}`}>
-              {formsActive ? 'OPEN' : 'CLOSED'}
-            </span>
+            <span className={`p-tag ${formsActive ? 'p-tag-on' : 'p-tag-off'}`}>{formsActive ? 'OPEN' : 'CLOSED'}</span>
           </div>
           <div className="panel-body">
             <div className="state-row">
               <span className="state-label">ГЛОБАЛЬНЫЙ СТАТУС:</span>
-              <span className={`state-value ${formsActive ? 'sv-on' : 'sv-off'}`}>
-                {formsActive ? '🟢 ВСЕ ЗАЯВКИ ОТКРЫТЫ' : '🔴 ВСЕ ЗАЯВКИ ОСТАНОВЛЕНЫ'}
-              </span>
+              <span className={`state-value ${formsActive ? 'sv-on' : 'sv-off'}`}>{formsActive ? '🟢 ВСЕ ЗАЯВКИ ОТКРЫТЫ' : '🔴 ВСЕ ЗАЯВКИ ОСТАНОВЛЕНЫ'}</span>
             </div>
-            <button
-              className={`btn btn-wide ${formsActive ? 'btn-danger' : 'btn-success'}`}
-              onClick={toggleForms}
-            >
+            <button className={`btn btn-wide ${formsActive ? 'btn-danger' : 'btn-success'}`} onClick={toggleForms}>
               {formsActive ? '✕ ОСТАНОВИТЬ ВСЕ ЗАЯВКИ' : '✓ ВОЗОБНОВИТЬ ВСЕ ЗАЯВКИ'}
             </button>
 
             <div className="sub-block">
-              <div className="sub-head">
-                <span className="sub-tag">//</span>
-                <span className="sub-title">ОТДЕЛЬНЫЕ ФОРМЫ</span>
-              </div>
-
+              <div className="sub-head"><span className="sub-tag">//</span><span className="sub-title">ОТДЕЛЬНЫЕ ФОРМЫ</span></div>
               {FORM_TOGGLES.map(item => {
                 const active = formTypes[item.key] !== false;
                 return (
                   <div key={item.key} className="toggle-row">
                     <span className="tr-icon">{item.icon}</span>
                     <span className="tr-label">{item.label}</span>
-                    <span className={`tr-status ${active ? 'tr-on' : 'tr-off'}`}>
-                      {active ? '🟢 ВКЛ' : '🔴 ВЫКЛ'}
-                    </span>
-                    <button
-                      className={`tr-btn ${active ? 'tr-btn-off' : 'tr-btn-on'}`}
-                      onClick={() => toggleFormType(item.key)}
-                    >
-                      {active ? 'ОТКЛЮЧИТЬ' : 'ВКЛЮЧИТЬ'}
-                    </button>
+                    <span className={`tr-status ${active ? 'tr-on' : 'tr-off'}`}>{active ? '🟢 ВКЛ' : '🔴 ВЫКЛ'}</span>
+                    <button className={`tr-btn ${active ? 'tr-btn-off' : 'tr-btn-on'}`} onClick={() => toggleFormType(item.key)}>{active ? 'ОТКЛЮЧИТЬ' : 'ВКЛЮЧИТЬ'}</button>
                   </div>
                 );
               })}
@@ -286,7 +244,7 @@ export default function AdminPanel() {
           </div>
         </section>
 
-        {/* 04. ЗАБЛОКИРОВАТЬ ПОЛЬЗОВАТЕЛЯ */}
+        {/* 04. ЗАБЛОКИРОВАТЬ */}
         <section className="panel panel-danger">
           <div className="panel-head">
             <span className="p-num">04</span>
@@ -295,20 +253,13 @@ export default function AdminPanel() {
           </div>
           <div className="panel-body">
             <label className="lbl">DISCORD ID</label>
-            <input className="field" type="text" value={banUserId}
-              onChange={(e) => setBanUserId(e.target.value)} placeholder="Например: 123456789012345678" />
-
+            <input className="field" type="text" value={banUserId} onChange={(e) => setBanUserId(e.target.value)} placeholder="Например: 123456789012345678" />
             <label className="lbl">ПРИЧИНА (НЕОБЯЗАТЕЛЬНО)</label>
-            <input className="field" type="text" value={banReason}
-              onChange={(e) => setBanReason(e.target.value)} placeholder="Например: нарушение правил" />
-
+            <input className="field" type="text" value={banReason} onChange={(e) => setBanReason(e.target.value)} placeholder="Например: нарушение правил" />
             <label className="check">
-              <input type="checkbox" checked={banPermanent}
-                onChange={(e) => setBanPermanent(e.target.checked)} />
-              <span className="check-box" />
-              <span className="check-text">🔒 ЗАБАНИТЬ НАВСЕГДА (БЕЗ СРОКА)</span>
+              <input type="checkbox" checked={banPermanent} onChange={(e) => setBanPermanent(e.target.checked)} />
+              <span className="check-box" /><span className="check-text">🔒 ЗАБАНИТЬ НАВСЕГДА (БЕЗ СРОКА)</span>
             </label>
-
             <button className="btn btn-danger btn-wide" onClick={handleBan}>
               {banPermanent ? '🔒 ЗАБАНИТЬ НАВСЕГДА' : '⏱ ЗАБЛОКИРОВАТЬ · 7 ДНЕЙ'}
             </button>
@@ -316,7 +267,7 @@ export default function AdminPanel() {
           </div>
         </section>
 
-        {/* 05. РАЗБЛОКИРОВАТЬ ПОЛЬЗОВАТЕЛЯ */}
+        {/* 05. РАЗБЛОКИРОВАТЬ */}
         <section className="panel">
           <div className="panel-head">
             <span className="p-num">05</span>
@@ -325,11 +276,8 @@ export default function AdminPanel() {
           </div>
           <div className="panel-body">
             <label className="lbl">DISCORD ID</label>
-            <input className="field" type="text" value={unbanUserId}
-              onChange={(e) => setUnbanUserId(e.target.value)} placeholder="ID ранее заблокированного пользователя" />
-            <button className="btn btn-solid btn-wide" onClick={() => handleUnban()}>
-              ✓ СНЯТЬ БЛОКИРОВКУ
-            </button>
+            <input className="field" type="text" value={unbanUserId} onChange={(e) => setUnbanUserId(e.target.value)} placeholder="ID ранее заблокированного пользователя" />
+            <button className="btn btn-solid btn-wide" onClick={() => handleUnban()}>✓ СНЯТЬ БЛОКИРОВКУ</button>
             {status && <p className="msg">{status}</p>}
           </div>
         </section>
@@ -344,31 +292,15 @@ export default function AdminPanel() {
           <div className="panel-body">
             {bannedUsers.length > 0 && (
               <div className="ban-filters">
-                <input
-                  className="field"
-                  type="text"
-                  placeholder="Поиск по ID, нику или причине..."
-                  value={bannedSearch}
-                  onChange={(e) => setBannedSearch(e.target.value)}
-                  style={{ marginBottom: 0 }}
-                />
-                <select
-                  className="field"
-                  value={bannedFilter}
-                  onChange={(e) => setBannedFilter(e.target.value)}
-                  style={{ marginBottom: 0, maxWidth: 220 }}
-                >
-                  <option value="all">ВСЕ</option>
-                  <option value="permanent">🔒 НАВСЕГДА</option>
-                  <option value="temp">⏱ ВРЕМЕННЫЕ</option>
-                  <option value="admin">👤 РУЧНЫЕ</option>
-                  <option value="autospam">🤖 AUTOSPAM</option>
-                  <option value="banword">🤬 BANWORD</option>
+                <input className="field" type="text" placeholder="Поиск по ID, нику или причине..." value={bannedSearch} onChange={(e) => setBannedSearch(e.target.value)} style={{ marginBottom: 0 }} />
+                <select className="field" value={bannedFilter} onChange={(e) => setBannedFilter(e.target.value)} style={{ marginBottom: 0, maxWidth: 220 }}>
+                  <option value="all">ВСЕ</option><option value="permanent">🔒 НАВСЕГДА</option>
+                  <option value="temp">⏱ ВРЕМЕННЫЕ</option><option value="admin">👤 РУЧНЫЕ</option>
+                  <option value="autospam">🤖 AUTOSPAM</option><option value="banword">🤬 BANWORD</option>
                 </select>
                 <a href="/api/admin/export?type=banned" className="btn">⬇ CSV</a>
               </div>
             )}
-
             {bannedUsers.length === 0 ? (
               <p className="muted">РЕЕСТР ПУСТ</p>
             ) : visibleBanned.length === 0 ? (
@@ -378,25 +310,14 @@ export default function AdminPanel() {
                 {visibleBanned.map(user => (
                   <div key={user.userId} className="banned-item">
                     <div className="bi-id">
-                      <span className="bi-label">ID</span>
-                      <span className="bi-value">{user.userId}</span>
+                      <span className="bi-label">ID</span><span className="bi-value">{user.userId}</span>
                       {user.username && <span className="bi-user">// {user.username}</span>}
                     </div>
                     <div className="bi-right">
                       {user.permanent && <span className="bi-badge">🔒 НАВСЕГДА</span>}
-                      {user.source && user.source !== 'admin' && (
-                        <span className="bi-source">[{user.source}]</span>
-                      )}
+                      {user.source && user.source !== 'admin' && <span className="bi-source">[{user.source}]</span>}
                       <span className="bi-reason">{user.reason || '—'}</span>
-                      <button
-                        className="bi-unban"
-                        onClick={() => {
-                          if(confirm(`Разбанить ${user.userId}?`)) handleUnban(user.userId);
-                        }}
-                        title="Разбанить"
-                      >
-                        ✕
-                      </button>
+                      <button className="bi-unban" onClick={() => { if(confirm(`Разбанить ${user.userId}?`)) handleUnban(user.userId); }} title="Разбанить">✕</button>
                     </div>
                   </div>
                 ))}
@@ -405,7 +326,7 @@ export default function AdminPanel() {
           </div>
         </section>
 
-        {/* 07. ССЫЛКИ НА ДРУГИЕ РАЗДЕЛЫ */}
+        {/* 07. СЛУЖЕБНЫЕ ИНСТРУМЕНТЫ */}
         <section className="panel">
           <div className="panel-head">
             <span className="p-num">07</span>
@@ -415,7 +336,6 @@ export default function AdminPanel() {
             <div className="admin-links">
               <a href="/admin/audit" className="btn">📋 ЖУРНАЛ АУДИТА</a>
               <a href="/admin/health" className="btn">🩺 ДИАГНОСТИКА</a>
-              <a href="/admin/support" className="btn">✉ ТИКЕТЫ (Поддержка)</a>
               <a href="/admin/duplicates" className="btn">👥 МУЛЬТИАККАУНТЫ</a>
             </div>
           </div>
@@ -469,14 +389,21 @@ export default function AdminPanel() {
         .btn-wide { width: 100%; }
         .msg { margin-top: 12px; color: #4caf50; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 1px; }
         
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
         .stat { background: #060606; border: 1px solid #1f1f1f; padding: 16px 12px; text-align: center; }
         .stat-val { font-size: 28px; font-weight: 900; color: #fff; font-family: ui-monospace, monospace; line-height: 1; }
         .stat-lbl { color: #666; font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: 2px; margin-top: 8px; text-transform: uppercase; }
-        
-        .export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        @media (max-width: 500px) { .export-grid { grid-template-columns: 1fr; } }
 
+        /* СТИЛИ ГРАФИКА */
+        .chart-container { margin-top: 24px; padding-top: 20px; border-top: 1px dashed #1f1f1f; }
+        .chart-title { font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 2px; color: #888; text-transform: uppercase; margin-bottom: 16px; }
+        .chart-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .chart-label { font-family: ui-monospace, monospace; font-size: 10px; color: #ccc; width: 90px; text-align: right; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        .chart-bar-wrap { flex: 1; height: 12px; background: #060606; border: 1px solid #1a1a1a; position: relative; }
+        .chart-bar { height: 100%; background: #fff; transition: width 0.5s ease; }
+        .chart-val { font-family: ui-monospace, monospace; font-size: 11px; color: #fff; font-weight: bold; width: 30px; }
+
+        .export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .state-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 1.6px; }
         .state-label { color: #666; }
         .state-value { padding: 5px 12px; border: 1px solid #2a2a2a; }
@@ -528,6 +455,7 @@ export default function AdminPanel() {
           .toggle-row { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
           .tr-label { width: 100%; flex: none; }
           .tr-btn { width: 100%; }
+          .export-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </Layout>
