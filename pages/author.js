@@ -11,8 +11,8 @@ const AUTHOR = {
   avatar: 'https://media1.tenor.com/m/sleESnJc5bEAAAAd/oshi-no-ko-season-2.gif',
   roles: ['ADMIN', 'DEVELOPER'],
   bio: 'Создатель и хранитель FIB Forms. Пишу код, чтобы заявки уходили туда, куда нужно, а не в никуда.',
-  site: 'http://saketo.xo.je/?i=2',
-  siteLabel: 'ЛИЧНОЕ ПРОСТРАНСТВО'
+  site: 'https://murane.gt.tc/',
+  siteLabel: 'Чисто для себя'
 };
 
 // 🈴 Иероглифы вокруг аватарки
